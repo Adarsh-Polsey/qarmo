@@ -7,7 +7,7 @@
     "@qarmo/i18n": "workspace:*",
     "@qarmo/supabase": "workspace:*",
     "@qarmo/ui": "workspace:*",
-    "expo": "~57.0.4",
+    "expo": "~57.0.6",
     "expo-status-bar": "~57.0.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
