@@ -140,7 +140,9 @@
   "map": {
     "locationDenied": "Turn on location to see partners near you.",
     "openSettings": "Open settings",
-    "zoomIn": "Zoom in to see more"
+    "zoomIn": "Zoom in to see more",
+    "openOnPhone": "Open on your phone to see the map",
+    "webPlaceholderDesc": "For the best experience, including real-time locations and interactive features, please access this map using the Qarmo app on your mobile device."
   },
   "tabs": {
     "home": "Home",
