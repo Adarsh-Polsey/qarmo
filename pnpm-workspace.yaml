@@ -5,6 +5,7 @@ nodeLinker: hoisted
 overrides:
   react: 19.1.0
   react-dom: 19.1.0
+  react-native: 0.81.5
 minimumReleaseAgeExclude:
   - '@expo/cli@54.0.26 || 56.1.20 || 57.0.8'
   - '@expo/config-plugins@54.0.5 || 56.0.13 || 57.0.5'
