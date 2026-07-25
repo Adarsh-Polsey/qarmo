@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import * as SecureStore from 'expo-secure-store';
+import { safeSecureStore as SecureStore } from '@qarmo/supabase';
 
 export interface WizardData {
   fullName: string;

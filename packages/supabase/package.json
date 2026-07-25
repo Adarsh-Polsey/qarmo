@@ -8,7 +8,8 @@
     "@supabase/supabase-js": "^2.43.0"
   },
   "peerDependencies": {
-    "expo-secure-store": "*"
+    "expo-secure-store": "*",
+    "react-native": "*"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

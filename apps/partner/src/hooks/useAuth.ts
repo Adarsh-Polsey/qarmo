@@ -7,8 +7,8 @@ import {
   getSession as supabaseGetSession,
   Session,
   User,
+  safeSecureStore as SecureStore,
 } from '@qarmo/supabase';
-import * as SecureStore from 'expo-secure-store';
 import { DEFAULT_COUNTRY_CODE } from '@qarmo/core';
 
 // Define profile type from supabase schema
