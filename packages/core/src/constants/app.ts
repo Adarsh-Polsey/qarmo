@@ -11,3 +11,18 @@ export const KERALA_BOUNDS = {
   minLongitude: 74.85,
   maxLongitude: 77.25,
 };
+
+export const CITIES = [
+  'Kochi',
+  'Thiruvananthapuram',
+  'Kozhikode',
+  'Thrissur',
+  'Kollam',
+  'Alappuzha',
+  'Palakkad',
+  'Kannur',
+  'Kottayam',
+];
+
+export const DEFAULT_COUNTRY_CODE = '+91';
+

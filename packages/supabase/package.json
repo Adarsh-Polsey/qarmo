@@ -7,6 +7,9 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.43.0"
   },
+  "peerDependencies": {
+    "expo-secure-store": "*"
+  },
   "scripts": {
     "typecheck": "tsc --noEmit",
     "lint": "eslint \"src/**/*.{ts,tsx,js,jsx}\""

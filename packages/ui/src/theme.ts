@@ -1,17 +1,17 @@
 export const theme = {
   colors: {
     // Core palette — Qarmo Design Philosophy
-    primary: '#E8A400',        // Deep Amber
+    primary: '#E8A400', // Deep Amber
     primaryPressed: '#C78D00', // Burnt Amber
-    ink: '#1A1A1A',            // Rickshaw Black
-    success: '#1B7A3D',        // Kerala Green
-    danger: '#C62828',         // Brick Red
-    info: '#1565C0',           // Sky Blue
-    background: '#FFFFFF',     // White
-    surface: '#F4F5F7',        // Mist
-    border: '#D9DCE1',         // Line Grey
-    mutedText: '#5F6570',      // Grey
-    textOnColored: '#FFFFFF',  // White text for use on amber/dark backgrounds
+    ink: '#1A1A1A', // Rickshaw Black
+    success: '#1B7A3D', // Kerala Green
+    danger: '#C62828', // Brick Red
+    info: '#1565C0', // Sky Blue
+    background: '#FFFFFF', // White
+    surface: '#F4F5F7', // Mist
+    border: '#D9DCE1', // Line Grey
+    mutedText: '#5F6570', // Grey
+    textOnColored: '#FFFFFF', // White text for use on amber/dark backgrounds
   },
   spacing: {
     xs: 4,

@@ -7,11 +7,18 @@
     "@qarmo/i18n": "workspace:*",
     "@qarmo/supabase": "workspace:*",
     "@qarmo/ui": "workspace:*",
-    "expo": "~57.0.6",
-    "expo-status-bar": "~57.0.0",
-    "react": "19.2.3",
-    "react-dom": "19.2.3",
-    "react-native": "0.86.0"
+    "@react-native-async-storage/async-storage": "^2.2.0",
+    "expo": "~54.0.36",
+    "expo-device": "^8.0.10",
+    "expo-file-system": "~19.0.23",
+    "expo-image-manipulator": "~14.0.8",
+    "expo-image-picker": "^17.0.11",
+    "expo-notifications": "^0.32.17",
+    "expo-secure-store": "~15.0.8",
+    "expo-status-bar": "~3.0.9",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "react-native": "0.81.4"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0"
@@ -21,6 +28,7 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "dev": "expo start",
+    "dev:tunnel": "bash scripts/dev-tunnel.sh",
     "typecheck": "tsc --noEmit",
     "lint": "eslint \"**/*.{ts,tsx,js,jsx}\" --ignore-pattern node_modules"
   },

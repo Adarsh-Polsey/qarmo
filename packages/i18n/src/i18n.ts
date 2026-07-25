@@ -12,6 +12,7 @@ i18n
     },
     lng: 'en',
     fallbackLng: 'en',
+    compatibilityJSON: 'v3', // Hermes doesn't support Intl.PluralRules
     interpolation: {
       escapeValue: false, // React already safe from XSS
     },

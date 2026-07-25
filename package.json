@@ -2,7 +2,13 @@
   "name": "qarmo-monorepo",
   "version": "1.0.0",
   "private": true,
-  "packageManager": "pnpm@11.13.0",
+  "packageManager": "pnpm@11.15.1",
+  "pnpm": {
+    "overrides": {
+      "react": "19.1.0",
+      "react-dom": "19.1.0"
+    }
+  },
   "scripts": {
     "preinstall": "npx only-allow pnpm",
     "dev": "turbo dev",

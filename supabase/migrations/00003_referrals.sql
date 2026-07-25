@@ -23,7 +23,7 @@ create policy "Users can select referrals they referred"
   using (auth.uid() = referrer_id);
 
 -- Create referral_points view
-create or replace view public.referral_points as
+create or replace view public.referral_points with (security_invoker = true) as
 select
   referrer_id as user_id,
   coalesce(sum(points_awarded), 0)::int as total_points

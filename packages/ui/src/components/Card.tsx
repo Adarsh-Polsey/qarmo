@@ -16,12 +16,7 @@ export const Card: React.FC<CardProps> = ({
 }) => {
   return (
     <View
-      style={[
-        styles.card,
-        { padding: theme.spacing[padding] },
-        theme.shadows[shadow],
-        style,
-      ]}
+      style={[styles.card, { padding: theme.spacing[padding] }, theme.shadows[shadow], style]}
       {...props}
     >
       {children}

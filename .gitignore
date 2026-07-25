@@ -39,3 +39,7 @@ yarn-error.*
 
 # TypeScript
 *.tsbuildinfo
+supabase/.temp/
+.env
+.hermes/
+package-lock.json
