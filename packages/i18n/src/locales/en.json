@@ -149,5 +149,11 @@
     "aiAgent": "AI Agent",
     "jobBoard": "Job Board",
     "account": "Account"
+  },
+  "landing": {
+    "welcomeTitle": "Welcome to Qarmo",
+    "tagline": "Rides & deliveries, made simple",
+    "register": "Register",
+    "login": "Log in"
   }
 }

@@ -11,6 +11,7 @@ import { theme, Text, Button } from '@qarmo/ui';
 import { useTranslation } from '@qarmo/i18n';
 import { useAuth } from '../hooks/useAuth';
 import { useWizard } from '../hooks/useWizard';
+import { LandingScreen } from '../screens/LandingScreen';
 import { OTPScreen } from '../screens/OTPScreen';
 import { WizardNamePhotoScreen } from '../screens/WizardNamePhotoScreen';
 import { WizardRoleScreen } from '../screens/WizardRoleScreen';
@@ -38,6 +39,9 @@ export const AppNavigator: React.FC = () => {
   } = useWizard(user?.id);
 
   const [activeTab, setActiveTab] = useState<'home' | 'tab2' | 'profile'>('home');
+  // Beta 1: landing → existing wizard flow
+  type AuthScreen = 'landing' | 'otp';
+  const [authScreen, setAuthScreen] = useState<AuthScreen>('landing');
 
   const { locationError } = usePartnerLocation();
 
@@ -53,6 +57,15 @@ export const AppNavigator: React.FC = () => {
   }
 
   if (!user) {
+    if (authScreen === 'landing') {
+      return (
+        <LandingScreen
+          onRegister={() => setAuthScreen('otp')}
+          onLogin={() => setAuthScreen('otp')}
+        />
+      );
+    }
+    // Both Register and Login go to phone OTP for the beta
     return <OTPScreen />;
   }
 
