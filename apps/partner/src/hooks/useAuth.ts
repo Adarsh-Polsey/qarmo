@@ -22,6 +22,10 @@ export interface UserProfile {
   referral_code: string | null;
   profile_completed_at: string | null;
   created_at: string;
+  account_type: string;
+  partner_type: string | null;
+  last_location: any | null;
+  location_updated_at: string | null;
 }
 
 interface AuthContextType {

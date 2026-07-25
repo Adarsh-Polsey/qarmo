@@ -6,7 +6,10 @@
     "error": "എന്തോ തകരാറിലായി",
     "retry": "വീണ്ടും ശ്രമിക്കുക",
     "notSelected": "തിരഞ്ഞെടുത്തിട്ടില്ല",
-    "save": "സംരക്ഷിക്കുക"
+    "save": "സംരക്ഷിക്കുക",
+    "yes": "അതെ",
+    "no": "ഇല്ല",
+    "comingSoon": "ഉടൻ വരുന്നു"
   },
   "auth": {
     "login": "ലോഗിൻ",
@@ -18,13 +21,16 @@
     "logout": "ലോഗ് ഔട്ട്",
     "tagline": "യാത്ര ചെയ്യൂ & നേടൂ",
     "changePhone": "മാറ്റുക ({{phone}})",
-    "resendLimitReached": "പരമാവധി ശ്രമങ്ങൾ കഴിഞ്ഞു."
+    "resendLimitReached": "പരമാവധി ശ്രമങ്ങൾ കഴിഞ്ഞു.",
+    "logoutConfirmTitle": "ലോഗ് ഔട്ട് ചെയ്യണോ?"
   },
   "partner": {
     "dashboard": "ഡാഷ്‌ബോർഡ്",
     "rides": "യാത്രകൾ",
     "earnings": "വരുമാനം",
-    "referrals": "റഫറലുകൾ"
+    "referrals": "റഫറലുകൾ",
+    "ridePartner": "🛺 റൈഡ് പാർട്ണർ",
+    "deliveryPartner": "🛵 ഡെലിവറി പാർട്ണർ"
   },
   "wizard": {
     "nameAndPhoto": "നിങ്ങളുടെ വിവരങ്ങൾ",
@@ -108,12 +114,38 @@
     "ridesAndDeliveries": "യാത്രകളും ഡെലിവറികളും",
     "partnerPlaceholder": "പങ്കാളി",
     "greeting": "ഹലോ, {{name}}",
-    "driverDefault": "ഡ്രൈവർ"
+    "driverDefault": "ഡ്രൈവർ",
+    "locationDenied": "ഉപഭോക്താക്കൾക്ക് നിങ്ങളെ കണ്ടെത്താൻ ലൊക്കേഷൻ ഓൺ ചെയ്യുക.",
+    "yourCode": "നിങ്ങളുടെ കോഡ്:",
+    "shareCode": "എന്റെ കോഡ് പങ്കിടുക",
+    "inviteNudge": "പോയിന്റുകൾ നേടാൻ ഒരു സുഹൃത്തിനെ ക്ഷണിക്കുക!",
+    "friendJoinedSingular": "1 സുഹൃത്ത് ജോയിൻ ചെയ്തു",
+    "friendsJoinedPlural": "{{count}} സുഹൃത്തുക്കൾ ജോയിൻ ചെയ്തു",
+    "unknownCity": "അജ്ഞാത നഗരം",
+    "shareMessage": "എന്റെ കോഡ് {{code}} ഉപയോഗിച്ച് ഖർമോയിൽ ചേരൂ"
   },
   "profile": {
     "memberSince": "അംഗമായ തീയതി: {{date}}",
     "appVersion": "Qarmo Partner App v{{version}}",
     "noVehicles": "വാഹനങ്ങൾ ഒന്നും രജിസ്റ്റർ ചെയ്തിട്ടില്ല.",
-    "editProfile": "പ്രൊഫൈൽ തിരുത്തുക"
+    "editProfile": "പ്രൊഫൈൽ തിരുത്തുക",
+    "account": "അക്കൗണ്ട്",
+    "customer": "കസ്റ്റമർ"
+  },
+  "counter": {
+    "partners": "ഖർമോയിൽ {{count}} പങ്കാളികൾ",
+    "partner_singular": "ഖർമോയിൽ 1 പങ്കാളി",
+    "zero": "ആദ്യത്തെയാളാകൂ — ഒരു സുഹൃത്തിനെ ക്ഷണിക്കൂ"
+  },
+  "map": {
+    "locationDenied": "നിങ്ങൾക്ക് സമീപമുള്ള പങ്കാളികളെ കാണാൻ ലൊക്കേഷൻ ഓൺ ചെയ്യുക.",
+    "openSettings": "ക്രമീകരണങ്ങൾ തുറക്കുക",
+    "zoomIn": "കൂടുതൽ കാണാൻ സൂം ചെയ്യുക"
+  },
+  "tabs": {
+    "home": "ഹോം",
+    "aiAgent": "AI ഏജന്റ്",
+    "jobBoard": "ജോലികൾ",
+    "account": "അക്കൗണ്ട്"
   }
 }

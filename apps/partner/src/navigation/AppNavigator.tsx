@@ -17,10 +17,12 @@ import { WizardRoleScreen } from '../screens/WizardRoleScreen';
 import { WizardVehicleScreen } from '../screens/WizardVehicleScreen';
 import { WizardReferralScreen } from '../screens/WizardReferralScreen';
 import { DashboardScreen } from '../screens/DashboardScreen';
-import { ReferralScreen } from '../screens/ReferralScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
+import { CustomerMapScreen } from '../screens/CustomerMapScreen';
+import { ComingSoonScreen } from '../screens/ComingSoonScreen';
 import { supabase } from '@qarmo/supabase';
 import { Ionicons } from '@expo/vector-icons';
+import { usePartnerLocation } from '../hooks/usePartnerLocation';
 
 export const AppNavigator: React.FC = () => {
   const { t } = useTranslation();
@@ -35,55 +37,51 @@ export const AppNavigator: React.FC = () => {
     isLoaded: isWizardLoaded,
   } = useWizard(user?.id);
 
-  const [activeTab, setActiveTab] = useState<'home' | 'referrals' | 'profile'>('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'tab2' | 'profile'>('home');
 
-  // If auth is loading, or wizard is loading when user is authenticated, show loading screen
+  const { locationError } = usePartnerLocation();
+
   if (loading || (user && !isWizardLoaded) || isCheckingProfile) {
     return (
       <SafeAreaView style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={theme.colors.primary} />
         <Text variant="caption" color={theme.colors.mutedText} style={styles.loadingText}>
-          {t('common.loading')}
+          {t('common.loading', { defaultValue: 'Loading...' })}
         </Text>
       </SafeAreaView>
     );
   }
 
-  // State 1: Not authenticated -> Show OTP Screen
   if (!user) {
     return <OTPScreen />;
   }
 
-  // If authenticated but profile failed to load (e.g. database/network error)
   if (!profile) {
     return (
       <SafeAreaView style={styles.loadingContainer}>
         <Text variant="body" color={theme.colors.danger} style={{ marginBottom: theme.spacing.md }}>
-          {t('common.error')}
+          {t('common.error', { defaultValue: 'Error loading profile' })}
         </Text>
         <Button
-          label={t('common.retry')}
+          label={t('common.retry', { defaultValue: 'Retry' })}
           variant="primary"
           onPress={refreshProfile}
           style={{ width: 200, marginBottom: theme.spacing.sm }}
         />
-        <Button label={t('auth.logout')} variant="ghost" onPress={signOut} style={{ width: 200 }} />
+        <Button label={t('auth.logout', { defaultValue: 'Log out' })} variant="ghost" onPress={signOut} style={{ width: 200 }} />
       </SafeAreaView>
     );
   }
 
-  // State 2: Authenticated but profile is incomplete -> Show Wizard
   if (!profile.profile_completed_at) {
     const handleWizardSubmit = async (validReferralCode: string | null) => {
       const userId = user.id;
 
-      // 1. Upload photo if selected
       let photoUrl = profile.photo_url;
       if (formData.photoUri) {
         try {
           const response = await fetch(formData.photoUri);
           const blob = await response.blob();
-
           const fileExt = formData.photoUri.split('.').pop() || 'jpg';
           const fileName = `${userId}/profile.jpg`;
 
@@ -94,10 +92,7 @@ export const AppNavigator: React.FC = () => {
               upsert: true,
             });
 
-          if (uploadError) {
-            console.error('Storage upload error:', uploadError);
-            throw new Error('Failed to upload profile photo: ' + uploadError.message);
-          }
+          if (uploadError) throw new Error('Failed to upload profile photo: ' + uploadError.message);
 
           const { data: publicUrlData } = supabase.storage
             .from('avatars')
@@ -105,12 +100,10 @@ export const AppNavigator: React.FC = () => {
 
           photoUrl = publicUrlData.publicUrl;
         } catch (photoErr: any) {
-          console.error('Photo upload failed:', photoErr);
           throw photoErr;
         }
       }
 
-      // 2. Call complete-profile edge function first with all form data
       const { data: funcData, error: funcError } = await supabase.functions.invoke('complete-profile', {
         body: {
           fullName: formData.fullName,
@@ -127,10 +120,7 @@ export const AppNavigator: React.FC = () => {
         throw new Error(errMsg);
       }
 
-      // 3. Reset local wizard state
       await resetWizard();
-
-      // 4. Refresh profile context in useAuth
       await refreshProfile();
     };
 
@@ -189,27 +179,18 @@ export const AppNavigator: React.FC = () => {
     }
   }
 
-  // State 3: Authenticated and profile is completed -> Show Dashboard / Tabs
+  const isCustomer = profile.account_type === 'customer';
+
   const renderTabContent = () => {
     switch (activeTab) {
       case 'home':
-        return (
-          <DashboardScreen
-            onNavigateToReferrals={() => setActiveTab('referrals')}
-            onNavigateToProfile={() => setActiveTab('profile')}
-          />
-        );
-      case 'referrals':
-        return <ReferralScreen />;
+        return isCustomer ? <CustomerMapScreen /> : <DashboardScreen locationError={locationError} onNavigateToReferrals={() => {}} onNavigateToProfile={() => setActiveTab('profile')} />;
+      case 'tab2':
+        return isCustomer ? <ComingSoonScreen iconName="hardware-chip-outline" /> : <ComingSoonScreen iconName="list-outline" />;
       case 'profile':
         return <ProfileScreen />;
       default:
-        return (
-          <DashboardScreen
-            onNavigateToReferrals={() => setActiveTab('referrals')}
-            onNavigateToProfile={() => setActiveTab('profile')}
-          />
-        );
+        return isCustomer ? <CustomerMapScreen /> : <DashboardScreen locationError={locationError} onNavigateToReferrals={() => {}} onNavigateToProfile={() => setActiveTab('profile')} />;
     }
   };
 
@@ -223,7 +204,7 @@ export const AppNavigator: React.FC = () => {
           activeOpacity={0.8}
         >
           <Ionicons
-            name={activeTab === 'home' ? 'home' : 'home-outline'}
+            name={isCustomer ? (activeTab === 'home' ? 'map' : 'map-outline') : (activeTab === 'home' ? 'home' : 'home-outline')}
             size={24}
             color={activeTab === 'home' ? theme.colors.primary : theme.colors.mutedText}
           />
@@ -232,26 +213,26 @@ export const AppNavigator: React.FC = () => {
             color={activeTab === 'home' ? theme.colors.primary : theme.colors.mutedText}
             style={styles.tabLabel}
           >
-            {t('partner.dashboard')}
+            {t('tabs.home', { defaultValue: 'Home' })}
           </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.tabItem}
-          onPress={() => setActiveTab('referrals')}
+          onPress={() => setActiveTab('tab2')}
           activeOpacity={0.8}
         >
           <Ionicons
-            name={activeTab === 'referrals' ? 'people' : 'people-outline'}
+            name={isCustomer ? (activeTab === 'tab2' ? 'hardware-chip' : 'hardware-chip-outline') : (activeTab === 'tab2' ? 'list' : 'list-outline')}
             size={24}
-            color={activeTab === 'referrals' ? theme.colors.primary : theme.colors.mutedText}
+            color={activeTab === 'tab2' ? theme.colors.primary : theme.colors.mutedText}
           />
           <Text
             variant="caption"
-            color={activeTab === 'referrals' ? theme.colors.primary : theme.colors.mutedText}
+            color={activeTab === 'tab2' ? theme.colors.primary : theme.colors.mutedText}
             style={styles.tabLabel}
           >
-            {t('partner.referrals')}
+            {isCustomer ? t('tabs.aiAgent', { defaultValue: 'AI Agent' }) : t('tabs.jobBoard', { defaultValue: 'Job Board' })}
           </Text>
         </TouchableOpacity>
 
@@ -270,7 +251,7 @@ export const AppNavigator: React.FC = () => {
             color={activeTab === 'profile' ? theme.colors.primary : theme.colors.mutedText}
             style={styles.tabLabel}
           >
-            {t('partner.profile')}
+            {t('tabs.account', { defaultValue: 'Account' })}
           </Text>
         </TouchableOpacity>
       </View>

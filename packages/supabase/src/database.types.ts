@@ -19,6 +19,10 @@ export type Database = {
           profile_completed_at: string | null;
           referral_code: string | null;
           roles: string[];
+          account_type: string;
+          partner_type: string | null;
+          last_location: unknown | null;
+          location_updated_at: string | null;
         };
         Insert: {
           city?: string | null;
@@ -30,6 +34,10 @@ export type Database = {
           profile_completed_at?: string | null;
           referral_code?: string | null;
           roles?: string[];
+          account_type?: string;
+          partner_type?: string | null;
+          last_location?: unknown | null;
+          location_updated_at?: string | null;
         };
         Update: {
           city?: string | null;
@@ -41,6 +49,10 @@ export type Database = {
           profile_completed_at?: string | null;
           referral_code?: string | null;
           roles?: string[];
+          account_type?: string;
+          partner_type?: string | null;
+          last_location?: unknown | null;
+          location_updated_at?: string | null;
         };
         Relationships: [];
       };
@@ -183,6 +195,10 @@ export type Database = {
     Functions: {
       complete_profile: { Args: { user_id: string }; Returns: Json };
       validate_referral_code: { Args: { code: string }; Returns: boolean };
+      partners_in_bounds: {
+        Args: { min_lng: number; min_lat: number; max_lng: number; max_lat: number };
+        Returns: { id: string; partner_type: string; lng: number; lat: number }[];
+      };
     };
     Enums: {
       [_ in never]: never;
