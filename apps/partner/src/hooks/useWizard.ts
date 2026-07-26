@@ -2,20 +2,31 @@ import { useState, useEffect } from 'react';
 import { safeSecureStore as SecureStore } from '@qarmo/supabase';
 
 export interface WizardData {
+  // Step 0 — pre-auth selections (stored locally before OTP)
+  accountType: 'customer' | 'partner' | '';
+  partnerType: 'delivery' | 'auto' | '';
+
+  // Shared fields
   fullName: string;
-  photoUri: string;
-  roles: string[];
+
+  // Partner-only fields
+  plateNumber: string;
   city: string;
-  vehicles: Record<string, { vehicleType: string; registrationNumber: string }>;
+  photoUri: string;
+  aadhaarUri: string;
+  drivingLicenceUri: string;
   referralCode: string;
 }
 
 const initialData: WizardData = {
+  accountType: '',
+  partnerType: '',
   fullName: '',
-  photoUri: '',
-  roles: [],
+  plateNumber: '',
   city: '',
-  vehicles: {},
+  photoUri: '',
+  aadhaarUri: '',
+  drivingLicenceUri: '',
   referralCode: '',
 };
 
@@ -24,9 +35,9 @@ export const useWizard = (userId: string | undefined) => {
   const [formData, setFormData] = useState<WizardData>(initialData);
   const [isLoaded, setIsLoaded] = useState<boolean>(false);
 
-  const storageKey = userId ? `@wizard_progress_${userId}` : null;
+  const storageKey = userId ? `@wizard_progress_v2_${userId}` : null;
 
-  // Load progress from AsyncStorage when userId is available
+  // Load persisted progress from SecureStore when userId is available
   useEffect(() => {
     const loadProgress = async () => {
       if (!storageKey) return;
@@ -34,8 +45,8 @@ export const useWizard = (userId: string | undefined) => {
         const saved = await SecureStore.getItemAsync(storageKey);
         if (saved) {
           const { savedStep, savedData } = JSON.parse(saved);
-          if (savedStep) setStepState(savedStep);
-          if (savedData) setFormData(savedData);
+          if (typeof savedStep === 'number') setStepState(savedStep);
+          if (savedData) setFormData((prev) => ({ ...prev, ...savedData }));
         }
       } catch (e) {
         console.error('Failed to load wizard progress from storage:', e);

@@ -20,7 +20,13 @@ export const safeSecureStore = {
       if (typeof window === 'undefined' || !window.localStorage) return null;
       return window.localStorage.getItem(key);
     }
-    return await SecureStore.getItemAsync(key);
+    try {
+      if (!(await SecureStore.isAvailableAsync())) return null;
+      return await SecureStore.getItemAsync(key);
+    } catch (e) {
+      console.warn('SecureStore.getItemAsync failed, returning null:', e);
+      return null;
+    }
   },
   setItemAsync: async (key: string, value: string): Promise<void> => {
     if (Platform.OS === 'web') {
@@ -29,7 +35,12 @@ export const safeSecureStore = {
       }
       return;
     }
-    await SecureStore.setItemAsync(key, value);
+    try {
+      if (!(await SecureStore.isAvailableAsync())) return;
+      await SecureStore.setItemAsync(key, value);
+    } catch (e) {
+      console.warn('SecureStore.setItemAsync failed:', e);
+    }
   },
   deleteItemAsync: async (key: string): Promise<void> => {
     if (Platform.OS === 'web') {
@@ -38,7 +49,12 @@ export const safeSecureStore = {
       }
       return;
     }
-    await SecureStore.deleteItemAsync(key);
+    try {
+      if (!(await SecureStore.isAvailableAsync())) return;
+      await SecureStore.deleteItemAsync(key);
+    } catch (e) {
+      console.warn('SecureStore.deleteItemAsync failed:', e);
+    }
   },
 };
 

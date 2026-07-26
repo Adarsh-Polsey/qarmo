@@ -22,7 +22,9 @@
     "tagline": "Drive & Earn",
     "changePhone": "Change ({{phone}})",
     "resendLimitReached": "Maximum resend attempts reached.",
-    "logoutConfirmTitle": "Log out?"
+    "logoutConfirmTitle": "Log out?",
+    "noAccount": "No account yet.",
+    "registerInstead": "Register"
   },
   "partner": {
     "dashboard": "Dashboard",
@@ -32,12 +34,28 @@
     "ridePartner": "🛺 Ride Partner",
     "deliveryPartner": "🛵 Delivery Partner"
   },
+  "accountType": {
+    "title": "How will you use Qarmo?",
+    "customer": "Customer",
+    "partner": "Partner",
+    "customerIcon": "🧍",
+    "partnerIcon": "🛺"
+  },
+  "partnerType": {
+    "title": "What do you do?",
+    "delivery": "Delivery Partner",
+    "ride": "Ride Partner",
+    "deliveryIcon": "🛵",
+    "rideIcon": "🛺"
+  },
   "wizard": {
     "nameAndPhoto": "Your Details",
     "fullName": "Full Name",
     "photo": "Profile Photo",
-    "takePhoto": "Take Photo",
-    "chooseGallery": "Choose from Gallery",
+    "takePhoto": "Take photo",
+    "chooseGallery": "Choose from gallery",
+    "retake": "Retake",
+    "replace": "Replace",
     "role": "Your Role",
     "autoDriver": "Auto Driver",
     "deliveryExecutive": "Delivery Executive",
@@ -49,14 +67,18 @@
     "selectCity": "Select your city",
     "vehicleType": "Vehicle Type",
     "registrationNumber": "Registration Number",
+    "plateNumber": "Vehicle number",
+    "plateHint": "e.g. KL 07 BZ 1234",
+    "cityHint": "Town or area you work in",
     "referral": "Referral Code",
     "referralHint": "Got a referral code?",
+    "referralOptional": "Optional — enter a referral code or skip",
     "skip": "Skip",
-    "invalidCode": "Invalid referral code",
+    "invalidCode": "Code not found",
     "continue": "Continue",
     "next": "Next",
     "finish": "Finish",
-    "stepTracker": "Step {{step}} of {{total}}",
+    "stepTracker": "Step {{step}} of {{total}}\n",
     "auto": "Auto",
     "noRegNeeded": "No registration plate needed for bicycle.",
     "vehicleTypes": {
@@ -64,6 +86,21 @@
       "scooter": "Scooter",
       "bicycle": "Bicycle"
     },
+    "aadhaar": "Aadhaar Card",
+    "aadhaarHint": "Upload your Aadhaar card",
+    "drivingLicence": "Driving Licence",
+    "drivingLicenceHint": "Upload your driving licence",
+    "uploadDocument": "Upload document",
+    "uploadFailed": "Upload failed.",
+    "tryAgain": "Try again",
+    "addPhotoToContinue": "Add a photo to continue",
+    "addDocumentToContinue": "Add a document to continue",
+    "enterNameToContinue": "Enter your name to continue",
+    "enterPlateToContinue": "Enter vehicle number to continue",
+    "selectCityToContinue": "Select a city to continue",
+    "permissionDenied": "Permission denied.",
+    "openSettings": "Open settings",
+    "photoTooBig": "Photo too big.",
     "errors": {
       "nameLength": "Name must be between 2 and 60 characters",
       "permissionRequired": "Permission required to access media/camera",
@@ -73,7 +110,9 @@
       "vehicleTypeRequired": "Please select a vehicle type",
       "selfReferral": "You cannot use your own referral code",
       "validationFailed": "Referral validation failed. Please try again.",
-      "completionFailed": "Failed to complete profile. Please try again."
+      "completionFailed": "Failed to complete profile. Please try again.",
+      "uploadFailed": "Upload failed. Try again.",
+      "fileTooLarge": "Photo too big. Try again."
     }
   },
   "referralScreen": {
@@ -126,11 +165,27 @@
   },
   "profile": {
     "memberSince": "Member since {{date}}",
-    "appVersion": "Qarmo Partner App v{{version}}",
+    "appVersion": "Qarmo App v{{version}} (Beta)",
     "noVehicles": "No vehicles registered.",
     "editProfile": "Edit Profile",
     "account": "Account",
-    "customer": "Customer"
+    "customer": "Customer",
+    "partner": "Partner",
+    "personalInfo": "Personal Information",
+    "accountDetails": "Account Details",
+    "documents": "Submitted Documents",
+    "aadhaarDoc": "Aadhaar Card",
+    "licenceDoc": "Driving Licence",
+    "docUploaded": "Uploaded & stored",
+    "docPending": "Stored for review",
+    "accountTypeLabel": "Account Type",
+    "partnerTypeLabel": "Partner Role",
+    "operatingCityLabel": "Operating City",
+    "vehiclePlateLabel": "Vehicle Number",
+    "referralCodeLabel": "Referral Code",
+    "phoneNumberLabel": "Phone Number",
+    "fullNameLabel": "Full Name",
+    "appInfo": "App Info"
   },
   "counter": {
     "partners": "{{count}} partners on Qarmo",
