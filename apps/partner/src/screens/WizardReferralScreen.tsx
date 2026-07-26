@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, KeyboardAvoidingView, Platform } from 'react-native';
+import { StyleSheet, View, SafeAreaView, KeyboardAvoidingView, Platform } from 'react-native';
 import { theme, Text, Button, Input } from '@qarmo/ui';
 import { useTranslation } from '@qarmo/i18n';
 import { supabase } from '@qarmo/supabase';
 import { WizardData } from '../hooks/useWizard';
 import { useAuth } from '../hooks/useAuth';
+import { WizardProgress } from '../components/WizardProgress';
 
 interface Props {
   userId: string;
@@ -12,6 +13,8 @@ interface Props {
   onUpdate: (updates: Partial<WizardData>) => void;
   onSubmit: (referralCode: string | null) => Promise<void>;
   onBack: () => void;
+  currentStep: number;
+  totalSteps: number;
 }
 
 export const WizardReferralScreen: React.FC<Props> = ({
@@ -20,6 +23,8 @@ export const WizardReferralScreen: React.FC<Props> = ({
   onUpdate,
   onSubmit,
   onBack,
+  currentStep,
+  totalSteps,
 }) => {
   const { t } = useTranslation();
   const { profile } = useAuth();
@@ -44,18 +49,18 @@ export const WizardReferralScreen: React.FC<Props> = ({
     setValidationError(null);
 
     try {
-      // Validate code via RPC instead of querying profiles directly
       const { data: isValid, error: rpcError } = await supabase.rpc('validate_referral_code', {
         code: trimmedCode,
       });
 
       if (rpcError || !isValid) {
-        setValidationError(t('wizard.invalidCode'));
+        // B-20: show "Code not found" — never block Finish
+        setValidationError(t('wizard.invalidCode', { defaultValue: 'Code not found' }));
         setSubmitting(false);
         return;
       }
 
-      // Check self-referral client-side ONLY as a lightweight UX hint (not authoritative)
+      // Lightweight self-referral UX hint (not authoritative — server also checks)
       if (profile && trimmedCode === profile.referral_code) {
         setValidationError(t('wizard.errors.selfReferral', { defaultValue: 'You cannot use your own referral code' }));
         setSubmitting(false);
@@ -65,7 +70,9 @@ export const WizardReferralScreen: React.FC<Props> = ({
       await handleComplete(trimmedCode);
     } catch (err) {
       console.error('Error during referral validation:', err);
-      setValidationError(t('wizard.errors.validationFailed', { defaultValue: 'Referral validation failed. Please try again.' }));
+      setValidationError(
+        t('wizard.errors.validationFailed', { defaultValue: 'Referral validation failed. Please try again.' }),
+      );
       setSubmitting(false);
     }
   };
@@ -76,7 +83,10 @@ export const WizardReferralScreen: React.FC<Props> = ({
       await onSubmit(validReferralCode);
     } catch (err: any) {
       console.error('Error completing profile:', err);
-      setValidationError(err.message || t('wizard.errors.completionFailed', { defaultValue: 'Failed to complete profile. Please try again.' }));
+      setValidationError(
+        err.message ||
+          t('wizard.errors.completionFailed', { defaultValue: 'Failed to complete profile. Please try again.' }),
+      );
       setSubmitting(false);
     }
   };
@@ -86,25 +96,23 @@ export const WizardReferralScreen: React.FC<Props> = ({
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <View style={styles.content}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text variant="title" style={styles.title}>
-            {t('wizard.referral')}
-          </Text>
-          <Text variant="caption" color={theme.colors.mutedText}>
-            {t('wizard.stepTracker', { step: 4, total: 4, defaultValue: 'Step 4 of 4' })}
-          </Text>
-        </View>
+    <SafeAreaView style={styles.safe}>
+      <KeyboardAvoidingView
+        style={styles.kav}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        {/* Progress */}
+        <WizardProgress current={currentStep} total={totalSteps} />
 
-        {/* Form */}
-        <View style={styles.form}>
-          <Text variant="body" style={styles.instruction}>
-            {t('wizard.referralHint')}
+        {/* Content */}
+        <View style={styles.content}>
+          <Text variant="title" style={styles.title}>
+            {t('wizard.referral', { defaultValue: 'Referral Code' })}
+          </Text>
+          <Text variant="body" color={theme.colors.mutedText} style={styles.hint}>
+            {t('wizard.referralOptional', {
+              defaultValue: 'Optional — enter a referral code or skip',
+            })}
           </Text>
 
           <Input
@@ -117,71 +125,51 @@ export const WizardReferralScreen: React.FC<Props> = ({
             editable={!submitting}
           />
         </View>
-      </View>
 
-      {/* Footer */}
-      <View style={styles.footer}>
-        <View style={styles.buttonsRow}>
+        {/* Footer */}
+        <View style={styles.footer}>
+          <View style={styles.buttonsRow}>
+            <Button
+              label={t('wizard.skip', { defaultValue: 'Skip' })}
+              variant="ghost"
+              disabled={submitting}
+              onPress={handleSkip}
+              style={styles.footerBtn}
+            />
+            <Button
+              label={t('wizard.finish', { defaultValue: 'Finish' })}
+              variant="primary"
+              disabled={submitting}
+              loading={submitting}
+              onPress={validateAndFinish}
+              style={styles.footerBtn}
+            />
+          </View>
           <Button
-            label={t('wizard.skip')}
+            label={t('common.cancel', { defaultValue: 'Cancel' })}
             variant="ghost"
             disabled={submitting}
-            onPress={handleSkip}
-            style={styles.footerBtn}
-          />
-          <Button
-            label={t('wizard.finish')}
-            variant="primary"
-            disabled={submitting}
-            loading={submitting}
-            onPress={validateAndFinish}
-            style={styles.footerBtn}
+            onPress={onBack}
           />
         </View>
-        <Button label={t('common.cancel')} variant="ghost" disabled={submitting} onPress={onBack} />
-      </View>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  safe: { flex: 1, backgroundColor: theme.colors.background },
+  kav: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    paddingHorizontal: theme.spacing.lg,
+    paddingTop: theme.spacing.lg,
+    paddingBottom: theme.spacing.lg,
+    justifyContent: 'space-between',
   },
-  content: {
-    flex: 1,
-    padding: theme.spacing.lg,
-  },
-  header: {
-    marginBottom: theme.spacing.xl,
-  },
-  title: {
-    marginBottom: theme.spacing.xs,
-  },
-  form: {
-    flex: 1,
-    justifyContent: 'center',
-    marginBottom: theme.spacing.xxl,
-  },
-  instruction: {
-    fontSize: 20,
-    fontWeight: '600',
-    marginBottom: theme.spacing.md,
-    textAlign: 'center',
-  },
-  footer: {
-    padding: theme.spacing.lg,
-    borderTopWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.background,
-    gap: theme.spacing.sm,
-  },
-  buttonsRow: {
-    flexDirection: 'row',
-    gap: theme.spacing.md,
-  },
-  footerBtn: {
-    flex: 1,
-  },
+  content: { flex: 1, justifyContent: 'center' },
+  title: { marginBottom: theme.spacing.sm },
+  hint: { marginBottom: theme.spacing.xl },
+  footer: { gap: theme.spacing.sm, alignItems: 'center' },
+  buttonsRow: { flexDirection: 'row', gap: theme.spacing.md, width: '100%' },
+  footerBtn: { flex: 1 },
 });

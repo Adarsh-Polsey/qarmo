@@ -6,24 +6,89 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   Platform,
+  Alert,
 } from 'react-native';
 import { theme, Text, Button } from '@qarmo/ui';
 import { useTranslation } from '@qarmo/i18n';
 import { useAuth } from '../hooks/useAuth';
 import { useWizard } from '../hooks/useWizard';
+import { supabase } from '@qarmo/supabase';
+
+// Screens — Auth
 import { LandingScreen } from '../screens/LandingScreen';
-import { OTPScreen } from '../screens/OTPScreen';
-import { WizardNamePhotoScreen } from '../screens/WizardNamePhotoScreen';
-import { WizardRoleScreen } from '../screens/WizardRoleScreen';
-import { WizardVehicleScreen } from '../screens/WizardVehicleScreen';
+
+// Screens — Pre-auth selection
+import { AccountTypeScreen } from '../screens/AccountTypeScreen';
+import { PartnerTypeScreen } from '../screens/PartnerTypeScreen';
+
+// Screens — Wizard (phone/OTP inside wizard)
+import { WizardPhoneScreen } from '../screens/WizardPhoneScreen';
+import { WizardOTPScreen } from '../screens/WizardOTPScreen';
+import { WizardNameScreen } from '../screens/WizardNameScreen';
+import { WizardPlateScreen } from '../screens/WizardPlateScreen';
+import { WizardCityScreen } from '../screens/WizardCityScreen';
+import { WizardPhotoScreen } from '../screens/WizardPhotoScreen';
+import { WizardDocumentScreen } from '../screens/WizardDocumentScreen';
 import { WizardReferralScreen } from '../screens/WizardReferralScreen';
+
+// Screens — App
 import { DashboardScreen } from '../screens/DashboardScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
 import { CustomerMapScreen } from '../screens/CustomerMapScreen';
 import { ComingSoonScreen } from '../screens/ComingSoonScreen';
-import { supabase } from '@qarmo/supabase';
+
 import { Ionicons } from '@expo/vector-icons';
 import { usePartnerLocation } from '../hooks/usePartnerLocation';
+import { compressImage } from '../utils/image';
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Flow types
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Pre-auth screens (unauthenticated)
+ *  landing       → Landing page
+ *  accountType   → Customer / Partner pick
+ *  partnerType   → Delivery / Ride pick (partner only)
+ *  phone         → Phone number entry (inside wizard)
+ *  otp           → OTP verification (inside wizard)
+ */
+type PreAuthScreen = 'landing' | 'accountType' | 'partnerType' | 'phone' | 'otp';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Step definitions
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Customer wizard steps (after OTP):
+ *   1 → name (finish)
+ * Total rendered steps in dots: phone=1, otp=2, name=3
+ */
+const CUSTOMER_TOTAL_STEPS = 3;
+
+/**
+ * Partner wizard steps (after OTP):
+ *   1 → name, 2 → plate, 3 → city, 4 → photo, 5 → aadhaar, 6 → licence, 7 → referral
+ * Total rendered steps in dots: phone=1, otp=2, then partner steps 3–9
+ */
+const PARTNER_POST_OTP_STEPS = 7;
+const PARTNER_TOTAL_STEPS = 2 + PARTNER_POST_OTP_STEPS; // = 9
+
+// partner post-OTP step numbers (1-indexed within post-OTP range)
+enum PartnerStep {
+  Name = 1,
+  Plate = 2,
+  City = 3,
+  Photo = 4,
+  Aadhaar = 5,
+  DrivingLicence = 6,
+  Referral = 7,
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AppNavigator
+// ─────────────────────────────────────────────────────────────────────────────
 
 export const AppNavigator: React.FC = () => {
   const { t } = useTranslation();
@@ -39,11 +104,17 @@ export const AppNavigator: React.FC = () => {
   } = useWizard(user?.id);
 
   const [activeTab, setActiveTab] = useState<'home' | 'tab2' | 'profile'>('home');
-  // Beta 1: landing → existing wizard flow
-  type AuthScreen = 'landing' | 'otp';
-  const [authScreen, setAuthScreen] = useState<AuthScreen>('landing');
+
+  // Pre-auth navigation state
+  const [preAuthScreen, setPreAuthScreen] = useState<PreAuthScreen>('landing');
+  // Phone formatted for OTP (e.g. "+919876543210")
+  const [otpPhone, setOtpPhone] = useState('');
+  // Whether user came through "Log in" (vs "Register")
+  const [isLoginMode, setIsLoginMode] = useState(false);
 
   const { locationError } = usePartnerLocation();
+
+  // ───── Loading states ─────────────────────────────────────────────────────
 
   if (loading || (user && !isWizardLoaded) || isCheckingProfile) {
     return (
@@ -56,20 +127,9 @@ export const AppNavigator: React.FC = () => {
     );
   }
 
-  if (!user) {
-    if (authScreen === 'landing') {
-      return (
-        <LandingScreen
-          onRegister={() => setAuthScreen('otp')}
-          onLogin={() => setAuthScreen('otp')}
-        />
-      );
-    }
-    // Both Register and Login go to phone OTP for the beta
-    return <OTPScreen />;
-  }
+  // ───── Error loading profile ───────────────────────────────────────────────
 
-  if (!profile) {
+  if (user && !profile) {
     return (
       <SafeAreaView style={styles.loadingContainer}>
         <Text variant="body" color={theme.colors.danger} style={{ marginBottom: theme.spacing.md }}>
@@ -81,56 +141,334 @@ export const AppNavigator: React.FC = () => {
           onPress={refreshProfile}
           style={{ width: 200, marginBottom: theme.spacing.sm }}
         />
-        <Button label={t('auth.logout', { defaultValue: 'Log out' })} variant="ghost" onPress={signOut} style={{ width: 200 }} />
+        <Button
+          label={t('auth.logout', { defaultValue: 'Log out' })}
+          variant="ghost"
+          onPress={signOut}
+          style={{ width: 200 }}
+        />
       </SafeAreaView>
     );
   }
 
-  if (!profile.profile_completed_at) {
-    const handleWizardSubmit = async (validReferralCode: string | null) => {
-      const userId = user.id;
+  // ───── Not logged in — pre-auth flow ──────────────────────────────────────
 
-      let photoUrl = profile.photo_url;
+  if (!user) {
+    // Landing
+    if (preAuthScreen === 'landing') {
+      return (
+        <LandingScreen
+          onRegister={() => {
+            setIsLoginMode(false);
+            setPreAuthScreen('accountType');
+          }}
+          onLogin={() => {
+            setIsLoginMode(true);
+            // Login goes straight to phone entry
+            updateFormData({ accountType: '' }); // clear, will be set after OTP from profile
+            setPreAuthScreen('phone');
+          }}
+        />
+      );
+    }
+
+    // Account type selection (Register path only)
+    if (preAuthScreen === 'accountType') {
+      return (
+        <AccountTypeScreen
+          onSelectCustomer={() => {
+            updateFormData({ accountType: 'customer', partnerType: '' });
+            setPreAuthScreen('phone');
+          }}
+          onSelectPartner={() => {
+            updateFormData({ accountType: 'partner' });
+            setPreAuthScreen('partnerType');
+          }}
+        />
+      );
+    }
+
+    // Partner type selection
+    if (preAuthScreen === 'partnerType') {
+      return (
+        <PartnerTypeScreen
+          onSelectDelivery={() => {
+            updateFormData({ partnerType: 'delivery' });
+            setPreAuthScreen('phone');
+          }}
+          onSelectRide={() => {
+            updateFormData({ partnerType: 'auto' });
+            setPreAuthScreen('phone');
+          }}
+          onBack={() => setPreAuthScreen('accountType')}
+        />
+      );
+    }
+
+    // Phone entry (inside wizard)
+    if (preAuthScreen === 'phone') {
+      const isCustomer = formData.accountType === 'customer';
+      const currentStep = 1;
+      const totalSteps = isLoginMode ? 2 : (isCustomer ? CUSTOMER_TOTAL_STEPS : PARTNER_TOTAL_STEPS);
+
+      return (
+        <WizardPhoneScreen
+          currentStep={currentStep}
+          totalSteps={totalSteps}
+          onOtpSent={(formattedPhone) => {
+            setOtpPhone(formattedPhone);
+            setPreAuthScreen('otp');
+          }}
+          onBack={() => {
+            if (isLoginMode) {
+              setPreAuthScreen('landing');
+            } else if (formData.accountType === 'partner') {
+              setPreAuthScreen('partnerType');
+            } else {
+              setPreAuthScreen('accountType');
+            }
+          }}
+        />
+      );
+    }
+
+    // OTP entry (inside wizard)
+    if (preAuthScreen === 'otp') {
+      const isCustomer = formData.accountType === 'customer';
+      const currentStep = 2;
+      const totalSteps = isLoginMode ? 2 : (isCustomer ? CUSTOMER_TOTAL_STEPS : PARTNER_TOTAL_STEPS);
+
+      return (
+        <WizardOTPScreen
+          phone={otpPhone}
+          currentStep={currentStep}
+          totalSteps={totalSteps}
+          onVerified={() => {
+            // After OTP, the auth state listener in useAuth will set `user`.
+            // If login mode: useAuth will load profile → profile.profile_completed_at set → goes to app.
+            // If register mode: user is set but profile is incomplete → post-OTP wizard steps start.
+            // Set initial wizard step to 1 (post-OTP) — handled below.
+            setStep(1);
+          }}
+          onBack={() => setPreAuthScreen('phone')}
+        />
+      );
+    }
+
+    return null;
+  }
+
+  // ───── Logged in, profile incomplete — wizard steps (post-OTP) ───────────
+
+  if (!profile?.profile_completed_at) {
+    const isCustomer = formData.accountType === 'customer' ||
+      (profile?.account_type === 'customer' && formData.accountType === '');
+
+    // ── Customer wizard: step 1 → Name ──────────────────────────────────────
+    if (isCustomer) {
+      // step 1 = name (= step 3 in total dots: 1=phone, 2=otp, 3=name)
+      const dotStep = 3;
+      const totalDots = CUSTOMER_TOTAL_STEPS;
+
+      const handleCustomerFinish = async () => {
+        if (!user) return;
+        try {
+          let { error } = await supabase.from('profiles').update({
+            full_name: formData.fullName,
+            account_type: 'customer',
+            profile_completed_at: new Date().toISOString(),
+          }).eq('id', user.id);
+
+          // Fallback if account_type column does not exist on Supabase DB schema yet
+          if (error && (error.code === 'PGRST204' || error.message?.includes('account_type'))) {
+            const fallbackRes = await supabase.from('profiles').update({
+              full_name: formData.fullName,
+              profile_completed_at: new Date().toISOString(),
+            }).eq('id', user.id);
+            error = fallbackRes.error;
+          }
+
+          if (error) throw error;
+          await resetWizard();
+          await refreshProfile();
+        } catch (err: any) {
+          console.error('Customer finish error:', err);
+          Alert.alert(
+            t('common.error', { defaultValue: 'Error' }),
+            err.message || t('wizard.errors.completionFailed', { defaultValue: 'Failed to complete profile.' }),
+          );
+        }
+      };
+
+      return (
+        <SafeAreaView style={styles.safe}>
+          <WizardNameScreen
+            formData={formData}
+            onUpdate={updateFormData}
+            onNext={handleCustomerFinish}
+            onBack={() => {
+              // For customers back from name goes back to landing (they haven't entered partner data)
+              signOut();
+            }}
+            currentStep={dotStep}
+            totalSteps={totalDots}
+            actionLabel={t('wizard.finish', { defaultValue: 'Finish' })}
+          />
+        </SafeAreaView>
+      );
+    }
+
+    // ── Partner wizard: steps 1–7 (post-OTP) ────────────────────────────────
+    const dotOffset = 2; // phone=1, otp=2 already counted
+
+    const handlePartnerSubmit = async (validReferralCode: string | null) => {
+      if (!user) return;
+
+      let avatarPath: string | null = null;
+
+      // 1. Upload profile photo to avatars bucket
       if (formData.photoUri) {
         try {
-          const response = await fetch(formData.photoUri);
+          const compressedPhotoUri = await compressImage(formData.photoUri, 800, 0.7);
+          const response = await fetch(compressedPhotoUri);
           const blob = await response.blob();
-          const fileExt = formData.photoUri.split('.').pop() || 'jpg';
-          const fileName = `${userId}/profile.jpg`;
-
-          const { error: uploadError } = await supabase.storage
+          const fileName = `${user.id}/profile.jpg`;
+          const { error: uploadErr } = await supabase.storage
             .from('avatars')
-            .upload(fileName, blob, {
-              contentType: `image/${fileExt === 'png' ? 'png' : 'jpeg'}`,
-              upsert: true,
-            });
-
-          if (uploadError) throw new Error('Failed to upload profile photo: ' + uploadError.message);
-
-          const { data: publicUrlData } = supabase.storage
-            .from('avatars')
-            .getPublicUrl(fileName);
-
-          photoUrl = publicUrlData.publicUrl;
+            .upload(fileName, blob, { contentType: 'image/jpeg', upsert: true });
+          if (uploadErr) throw new Error('Failed to upload photo: ' + uploadErr.message);
+          const { data: publicUrlData } = supabase.storage.from('avatars').getPublicUrl(fileName);
+          avatarPath = publicUrlData.publicUrl;
         } catch (photoErr: any) {
           throw photoErr;
         }
       }
 
-      const { data: funcData, error: funcError } = await supabase.functions.invoke('complete-profile', {
-        body: {
-          fullName: formData.fullName,
-          photoUrl,
-          roles: formData.roles,
-          city: formData.city,
-          vehicles: formData.vehicles,
-          referralCode: validReferralCode,
-        },
-      });
+      // 2. Upload documents to partner-documents bucket (fallback to avatars if bucket migration not run)
+      const uploadDoc = async (uri: string, docType: 'aadhaar' | 'driving_licence') => {
+        try {
+          const compressedDocUri = await compressImage(uri, 1200, 0.75);
+          const response = await fetch(compressedDocUri);
+          const blob = await response.blob();
+          const ext = 'jpg';
+          const storagePath = `${user.id}/${docType}.${ext}`;
+          
+          let { error: uploadErr } = await supabase.storage
+            .from('partner-documents')
+            .upload(storagePath, blob, { contentType: 'image/jpeg', upsert: true });
 
-      if (funcError || (funcData && (funcData as any).error)) {
-        const errMsg = funcError?.message || (funcData as any)?.error || 'Profile completion API error';
-        throw new Error(errMsg);
+          // Fallback to 'avatars' bucket if 'partner-documents' bucket does not exist on Supabase yet
+          if (uploadErr && (uploadErr.message?.includes('not found') || uploadErr.message?.includes('Bucket'))) {
+            const fallbackPath = `${user.id}/docs/${docType}.${ext}`;
+            const { error: fallbackErr } = await supabase.storage
+              .from('avatars')
+              .upload(fallbackPath, blob, { contentType: 'image/jpeg', upsert: true });
+            
+            if (!fallbackErr) return fallbackPath;
+          }
+
+          if (uploadErr) throw new Error(`Failed to upload ${docType}: ` + uploadErr.message);
+          return storagePath;
+        } catch (err: any) {
+          console.warn(`Doc upload warning for ${docType}:`, err.message);
+          return null;
+        }
+      };
+
+      let aadhaarPath: string | null = null;
+      let licencePath: string | null = null;
+
+      if (formData.aadhaarUri) {
+        aadhaarPath = await uploadDoc(formData.aadhaarUri, 'aadhaar');
+      }
+      if (formData.drivingLicenceUri) {
+        licencePath = await uploadDoc(formData.drivingLicenceUri, 'driving_licence');
+      }
+
+      // 3. Upsert partner_documents rows
+      if (aadhaarPath) {
+        const { error } = await supabase.from('partner_documents').upsert(
+          {
+            partner_id: user.id,
+            doc_type: 'aadhaar',
+            storage_path: aadhaarPath,
+            review_status: 'pending',
+            uploaded_at: new Date().toISOString(),
+          },
+          { onConflict: 'partner_id,doc_type' },
+        );
+        if (error) console.warn('Failed to save aadhaar DB record:', error.message);
+      }
+      if (licencePath) {
+        const { error } = await supabase.from('partner_documents').upsert(
+          {
+            partner_id: user.id,
+            doc_type: 'driving_licence',
+            storage_path: licencePath,
+            review_status: 'pending',
+            uploaded_at: new Date().toISOString(),
+          },
+          { onConflict: 'partner_id,doc_type' },
+        );
+        if (error) console.warn('Failed to save licence DB record:', error.message);
+      }
+
+      // 4. Build role/vehicle object for the complete-profile edge function
+      const partnerType = formData.partnerType || profile?.partner_type || 'delivery';
+      const roles = partnerType === 'auto' ? ['auto_driver'] : ['delivery_executive'];
+      const vehicleRole = roles[0];
+      const vehiclesPayload = {
+        [vehicleRole]: {
+          vehicleType: partnerType === 'auto' ? 'auto' : 'bike',
+          registrationNumber: formData.plateNumber || '',
+        },
+      };
+
+      // 5. Direct database update on profiles table as a baseline guarantee
+      let { error: directUpdateErr } = await supabase.from('profiles').update({
+        full_name: formData.fullName,
+        city: formData.city,
+        account_type: 'partner',
+        partner_type: partnerType === 'auto' ? 'ride' : 'delivery',
+        plate_number: formData.plateNumber || null,
+        referred_by: validReferralCode || null,
+        photo_url: avatarPath || profile?.photo_url || null,
+        profile_completed_at: new Date().toISOString(),
+      }).eq('id', user.id);
+
+      if (directUpdateErr && (directUpdateErr.code === 'PGRST204' || directUpdateErr.message?.includes('column'))) {
+        // Fallback update for standard profiles columns if new schema columns are missing
+        const fallbackRes = await supabase.from('profiles').update({
+          full_name: formData.fullName,
+          city: formData.city,
+          photo_url: avatarPath || profile?.photo_url || null,
+          profile_completed_at: new Date().toISOString(),
+        }).eq('id', user.id);
+        directUpdateErr = fallbackRes.error;
+      }
+
+      if (directUpdateErr) {
+        console.warn('Direct profile update warning:', directUpdateErr.message);
+      }
+
+      // 6. Invoke complete-profile edge function (for referrals & vehicle insertion)
+      try {
+        const { data: funcData, error: funcError } = await supabase.functions.invoke('complete-profile', {
+          body: {
+            fullName: formData.fullName,
+            photoUrl: avatarPath || profile?.photo_url || null,
+            roles,
+            city: formData.city,
+            vehicles: vehiclesPayload,
+            referralCode: validReferralCode,
+          },
+        });
+
+        if (funcError || (funcData as any)?.error) {
+          console.warn('complete-profile function warning:', funcError?.message || (funcData as any)?.error);
+        }
+      } catch (funcErr: any) {
+        console.warn('Edge function invoke exception:', funcErr.message);
       }
 
       await resetWizard();
@@ -138,51 +476,109 @@ export const AppNavigator: React.FC = () => {
     };
 
     switch (step) {
-      case 1:
+      case PartnerStep.Name:
         return (
           <SafeAreaView style={styles.safe}>
-            <WizardNamePhotoScreen
+            <WizardNameScreen
               formData={formData}
               onUpdate={updateFormData}
-              onNext={() => setStep(2)}
-              onSignOut={signOut}
+              onNext={() => setStep(PartnerStep.Plate)}
+              onBack={() => signOut()}
+              currentStep={dotOffset + PartnerStep.Name}
+              totalSteps={PARTNER_TOTAL_STEPS}
             />
           </SafeAreaView>
         );
-      case 2:
+
+      case PartnerStep.Plate:
         return (
           <SafeAreaView style={styles.safe}>
-            <WizardRoleScreen
+            <WizardPlateScreen
               formData={formData}
               onUpdate={updateFormData}
-              onNext={() => setStep(3)}
-              onBack={() => setStep(1)}
+              onNext={() => setStep(PartnerStep.City)}
+              onBack={() => setStep(PartnerStep.Name)}
+              currentStep={dotOffset + PartnerStep.Plate}
+              totalSteps={PARTNER_TOTAL_STEPS}
             />
           </SafeAreaView>
         );
-      case 3:
+
+      case PartnerStep.City:
         return (
           <SafeAreaView style={styles.safe}>
-            <WizardVehicleScreen
+            <WizardCityScreen
               formData={formData}
               onUpdate={updateFormData}
-              onNext={() => setStep(4)}
-              onBack={() => setStep(2)}
+              onNext={() => setStep(PartnerStep.Photo)}
+              onBack={() => setStep(PartnerStep.Plate)}
+              currentStep={dotOffset + PartnerStep.City}
+              totalSteps={PARTNER_TOTAL_STEPS}
             />
           </SafeAreaView>
         );
-      case 4:
+
+      case PartnerStep.Photo:
+        return (
+          <SafeAreaView style={styles.safe}>
+            <WizardPhotoScreen
+              formData={formData}
+              onUpdate={updateFormData}
+              onNext={() => setStep(PartnerStep.Aadhaar)}
+              onBack={() => setStep(PartnerStep.City)}
+              currentStep={dotOffset + PartnerStep.Photo}
+              totalSteps={PARTNER_TOTAL_STEPS}
+            />
+          </SafeAreaView>
+        );
+
+      case PartnerStep.Aadhaar:
+        return (
+          <SafeAreaView style={styles.safe}>
+            <WizardDocumentScreen
+              docType="aadhaar"
+              fieldKey="aadhaarUri"
+              formData={formData}
+              onUpdate={updateFormData}
+              onNext={() => setStep(PartnerStep.DrivingLicence)}
+              onBack={() => setStep(PartnerStep.Photo)}
+              currentStep={dotOffset + PartnerStep.Aadhaar}
+              totalSteps={PARTNER_TOTAL_STEPS}
+            />
+          </SafeAreaView>
+        );
+
+      case PartnerStep.DrivingLicence:
+        return (
+          <SafeAreaView style={styles.safe}>
+            <WizardDocumentScreen
+              docType="driving_licence"
+              fieldKey="drivingLicenceUri"
+              formData={formData}
+              onUpdate={updateFormData}
+              onNext={() => setStep(PartnerStep.Referral)}
+              onBack={() => setStep(PartnerStep.Aadhaar)}
+              currentStep={dotOffset + PartnerStep.DrivingLicence}
+              totalSteps={PARTNER_TOTAL_STEPS}
+            />
+          </SafeAreaView>
+        );
+
+      case PartnerStep.Referral:
         return (
           <SafeAreaView style={styles.safe}>
             <WizardReferralScreen
               userId={user.id}
               formData={formData}
               onUpdate={updateFormData}
-              onSubmit={handleWizardSubmit}
-              onBack={() => setStep(3)}
+              onSubmit={handlePartnerSubmit}
+              onBack={() => setStep(PartnerStep.DrivingLicence)}
+              currentStep={dotOffset + PartnerStep.Referral}
+              totalSteps={PARTNER_TOTAL_STEPS}
             />
           </SafeAreaView>
         );
+
       default:
         return (
           <SafeAreaView style={styles.loadingContainer}>
@@ -192,18 +588,34 @@ export const AppNavigator: React.FC = () => {
     }
   }
 
-  const isCustomer = profile.account_type === 'customer';
+  // ───── Logged in + profile complete — main app ────────────────────────────
+
+  const isCustomer = profile?.account_type === 'customer';
 
   const renderTabContent = () => {
     switch (activeTab) {
       case 'home':
-        return isCustomer ? <CustomerMapScreen /> : <DashboardScreen locationError={locationError} onNavigateToReferrals={() => {}} onNavigateToProfile={() => setActiveTab('profile')} />;
+        return isCustomer
+          ? <CustomerMapScreen />
+          : <DashboardScreen
+              locationError={locationError}
+              onNavigateToReferrals={() => {}}
+              onNavigateToProfile={() => setActiveTab('profile')}
+            />;
       case 'tab2':
-        return isCustomer ? <ComingSoonScreen iconName="hardware-chip-outline" /> : <ComingSoonScreen iconName="list-outline" />;
+        return isCustomer
+          ? <ComingSoonScreen iconName="hardware-chip-outline" />
+          : <ComingSoonScreen iconName="list-outline" />;
       case 'profile':
         return <ProfileScreen />;
       default:
-        return isCustomer ? <CustomerMapScreen /> : <DashboardScreen locationError={locationError} onNavigateToReferrals={() => {}} onNavigateToProfile={() => setActiveTab('profile')} />;
+        return isCustomer
+          ? <CustomerMapScreen />
+          : <DashboardScreen
+              locationError={locationError}
+              onNavigateToReferrals={() => {}}
+              onNavigateToProfile={() => setActiveTab('profile')}
+            />;
     }
   };
 
@@ -211,13 +623,11 @@ export const AppNavigator: React.FC = () => {
     <View style={styles.appContainer}>
       <View style={styles.tabContent}>{renderTabContent()}</View>
       <View style={styles.tabBar}>
-        <TouchableOpacity
-          style={styles.tabItem}
-          onPress={() => setActiveTab('home')}
-          activeOpacity={0.8}
-        >
+        <TouchableOpacity style={styles.tabItem} onPress={() => setActiveTab('home')} activeOpacity={0.8}>
           <Ionicons
-            name={isCustomer ? (activeTab === 'home' ? 'map' : 'map-outline') : (activeTab === 'home' ? 'home' : 'home-outline')}
+            name={isCustomer
+              ? (activeTab === 'home' ? 'map' : 'map-outline')
+              : (activeTab === 'home' ? 'home' : 'home-outline')}
             size={24}
             color={activeTab === 'home' ? theme.colors.primary : theme.colors.mutedText}
           />
@@ -230,13 +640,11 @@ export const AppNavigator: React.FC = () => {
           </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.tabItem}
-          onPress={() => setActiveTab('tab2')}
-          activeOpacity={0.8}
-        >
+        <TouchableOpacity style={styles.tabItem} onPress={() => setActiveTab('tab2')} activeOpacity={0.8}>
           <Ionicons
-            name={isCustomer ? (activeTab === 'tab2' ? 'hardware-chip' : 'hardware-chip-outline') : (activeTab === 'tab2' ? 'list' : 'list-outline')}
+            name={isCustomer
+              ? (activeTab === 'tab2' ? 'hardware-chip' : 'hardware-chip-outline')
+              : (activeTab === 'tab2' ? 'list' : 'list-outline')}
             size={24}
             color={activeTab === 'tab2' ? theme.colors.primary : theme.colors.mutedText}
           />
@@ -245,15 +653,13 @@ export const AppNavigator: React.FC = () => {
             color={activeTab === 'tab2' ? theme.colors.primary : theme.colors.mutedText}
             style={styles.tabLabel}
           >
-            {isCustomer ? t('tabs.aiAgent', { defaultValue: 'AI Agent' }) : t('tabs.jobBoard', { defaultValue: 'Job Board' })}
+            {isCustomer
+              ? t('tabs.aiAgent', { defaultValue: 'AI Agent' })
+              : t('tabs.jobBoard', { defaultValue: 'Job Board' })}
           </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.tabItem}
-          onPress={() => setActiveTab('profile')}
-          activeOpacity={0.8}
-        >
+        <TouchableOpacity style={styles.tabItem} onPress={() => setActiveTab('profile')} activeOpacity={0.8}>
           <Ionicons
             name={activeTab === 'profile' ? 'person' : 'person-outline'}
             size={24}

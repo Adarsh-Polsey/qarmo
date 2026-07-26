@@ -24,6 +24,8 @@ export interface UserProfile {
   created_at: string;
   account_type: string;
   partner_type: string | null;
+  plate_number?: string | null;
+  referred_by?: string | null;
   last_location: any | null;
   location_updated_at: string | null;
 }
@@ -140,14 +142,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (user?.id) {
       try {
         await SecureStore.deleteItemAsync(`@wizard_progress_${user.id}`);
+        await SecureStore.deleteItemAsync(`@wizard_progress_v2_${user.id}`);
       } catch (e) {
         console.error('Failed to clear wizard progress on logout:', e);
       }
     }
-    await supabaseSignOut();
-    setSession(null);
-    setUser(null);
-    setProfile(null);
+    try {
+      await supabaseSignOut();
+    } catch (e) {
+      console.warn('supabaseSignOut warning on logout:', e);
+    } finally {
+      setSession(null);
+      setUser(null);
+      setProfile(null);
+    }
   };
 
   return React.createElement(

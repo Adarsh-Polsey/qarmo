@@ -8,6 +8,41 @@ export type Database = {
   };
   public: {
     Tables: {
+      partner_documents: {
+        Row: {
+          doc_type: string;
+          id: string;
+          partner_id: string;
+          review_status: string;
+          storage_path: string;
+          uploaded_at: string;
+        };
+        Insert: {
+          doc_type: string;
+          id?: string;
+          partner_id: string;
+          review_status?: string;
+          storage_path: string;
+          uploaded_at?: string;
+        };
+        Update: {
+          doc_type?: string;
+          id?: string;
+          partner_id?: string;
+          review_status?: string;
+          storage_path?: string;
+          uploaded_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'partner_documents_partner_id_fkey';
+            columns: ['partner_id'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       profiles: {
         Row: {
           city: string | null;
@@ -16,8 +51,10 @@ export type Database = {
           id: string;
           phone: string;
           photo_url: string | null;
+          plate_number: string | null;
           profile_completed_at: string | null;
           referral_code: string | null;
+          referred_by: string | null;
           roles: string[];
           account_type: string;
           partner_type: string | null;
@@ -31,8 +68,10 @@ export type Database = {
           id: string;
           phone: string;
           photo_url?: string | null;
+          plate_number?: string | null;
           profile_completed_at?: string | null;
           referral_code?: string | null;
+          referred_by?: string | null;
           roles?: string[];
           account_type?: string;
           partner_type?: string | null;
@@ -46,8 +85,10 @@ export type Database = {
           id?: string;
           phone?: string;
           photo_url?: string | null;
+          plate_number?: string | null;
           profile_completed_at?: string | null;
           referral_code?: string | null;
+          referred_by?: string | null;
           roles?: string[];
           account_type?: string;
           partner_type?: string | null;

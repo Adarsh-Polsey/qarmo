@@ -22,7 +22,9 @@
     "tagline": "യാത്ര ചെയ്യൂ & നേടൂ",
     "changePhone": "മാറ്റുക ({{phone}})",
     "resendLimitReached": "പരമാവധി ശ്രമങ്ങൾ കഴിഞ്ഞു.",
-    "logoutConfirmTitle": "ലോഗ് ഔട്ട് ചെയ്യണോ?"
+    "logoutConfirmTitle": "ലോഗ് ഔട്ട് ചെയ്യണോ?",
+    "noAccount": "അക്കൗണ്ട് ഇല്ല.",
+    "registerInstead": "രജിസ്റ്റർ ചെയ്യുക"
   },
   "partner": {
     "dashboard": "ഡാഷ്‌ബോർഡ്",
@@ -32,12 +34,28 @@
     "ridePartner": "🛺 റൈഡ് പാർട്ണർ",
     "deliveryPartner": "🛵 ഡെലിവറി പാർട്ണർ"
   },
+  "accountType": {
+    "title": "ഖർമോ എങ്ങനെ ഉപയോഗിക്കും?",
+    "customer": "യാത്ര വേണം",
+    "partner": "സമ്പാദിക്കണം",
+    "customerIcon": "🧍",
+    "partnerIcon": "🛺"
+  },
+  "partnerType": {
+    "title": "നിങ്ങൾ എന്ത് ചെയ്യുന്നു?",
+    "delivery": "ഡെലിവറി പാർട്ണർ",
+    "ride": "റൈഡ് പാർട്ണർ",
+    "deliveryIcon": "🛵",
+    "rideIcon": "🛺"
+  },
   "wizard": {
     "nameAndPhoto": "നിങ്ങളുടെ വിവരങ്ങൾ",
     "fullName": "പൂർണ്ണമായ പേര്",
     "photo": "പ്രൊഫൈൽ ചിത്രം",
     "takePhoto": "ഫോട്ടോ എടുക്കുക",
     "chooseGallery": "ഗ്യാലറിയിൽ നിന്ന് തിരഞ്ഞെടുക്കുക",
+    "retake": "വീണ്ടും എടുക്കുക",
+    "replace": "മാറ്റുക",
     "role": "നിങ്ങളുടെ റോൾ",
     "autoDriver": "ഓട്ടോ ഡ്രൈവർ",
     "deliveryExecutive": "ഡെലിവറി എക്സിക്യൂട്ടീവ്",
@@ -49,10 +67,14 @@
     "selectCity": "നിങ്ങളുടെ നഗരം തിരഞ്ഞെടുക്കുക",
     "vehicleType": "വാഹനത്തിന്റെ തരം",
     "registrationNumber": "രജിസ്ട്രേഷൻ നമ്പർ",
-    "referral": "Referral Code",
+    "plateNumber": "വാഹന നമ്പർ",
+    "plateHint": "ഉദാ: KL 07 BZ 1234",
+    "cityHint": "നിങ്ങൾ ജോലി ചെയ്യുന്ന പട്ടണം അല്ലെങ്കിൽ പ്രദേശം",
+    "referral": "റഫറൽ കോഡ്",
     "referralHint": "റഫറൽ കോഡ് ഉണ്ടോ?",
+    "referralOptional": "ഐച്ഛികം — ഒരു റഫറൽ കോഡ് നൽകുക അല്ലെങ്കിൽ ഒഴിവാക്കുക",
     "skip": "ഒഴിവാക്കുക",
-    "invalidCode": "അസാധുവായ റഫറൽ കോഡ്",
+    "invalidCode": "കോഡ് കണ്ടെത്തിയില്ല",
     "continue": "തുടരുക",
     "next": "അടുത്തത്",
     "finish": "പൂർത്തിയാക്കുക",
@@ -64,6 +86,21 @@
       "scooter": "Scooter",
       "bicycle": "Bicycle"
     },
+    "aadhaar": "ആധാർ കാർഡ്",
+    "aadhaarHint": "ആധാർ കാർഡ് അപ്‌ലോഡ് ചെയ്യുക",
+    "drivingLicence": "ഡ്രൈവിംഗ് ലൈസൻസ്",
+    "drivingLicenceHint": "ഡ്രൈവിംഗ് ലൈസൻസ് അപ്‌ലോഡ് ചെയ്യുക",
+    "uploadDocument": "രേഖ അപ്‌ലോഡ് ചെയ്യുക",
+    "uploadFailed": "അപ്‌ലോഡ് പരാജയപ്പെട്ടു.",
+    "tryAgain": "വീണ്ടും ശ്രമിക്കുക",
+    "addPhotoToContinue": "തുടരാൻ ഒരു ഫോട്ടോ ചേർക്കുക",
+    "addDocumentToContinue": "തുടരാൻ ഒരു രേഖ ചേർക്കുക",
+    "enterNameToContinue": "തുടരാൻ നിങ്ങളുടെ പേര് നൽകുക",
+    "enterPlateToContinue": "തുടരാൻ വാഹന നമ്പർ നൽകുക",
+    "selectCityToContinue": "തുടരാൻ ഒരു നഗരം തിരഞ്ഞെടുക്കുക",
+    "permissionDenied": "അനുമതി നിഷേധിച്ചു.",
+    "openSettings": "ക്രമീകരണങ്ങൾ തുറക്കുക",
+    "photoTooBig": "ഫോട്ടോ വളരെ വലുതാണ്.",
     "errors": {
       "nameLength": "പേര് 2 നും 60 നും ഇടയിൽ അക്ഷരങ്ങൾ ആയിരിക്കണം",
       "permissionRequired": "മാധ്യമം/ക്യാമറ ആക്സസ് ചെയ്യാൻ അനുമതി ആവശ്യമാണ്",
@@ -73,7 +110,9 @@
       "vehicleTypeRequired": "വാഹനത്തിന്റെ തരം തിരഞ്ഞെടുക്കുക",
       "selfReferral": "നിങ്ങൾക്ക് സ്വന്തം റഫറൽ കോഡ് ഉപയോഗിക്കാൻ കഴിയില്ല",
       "validationFailed": "റഫറൽ പരിശോധന പരാജയപ്പെട്ടു. ദയവായി വീണ്ടും ശ്രമിക്കുക.",
-      "completionFailed": "പ്രൊഫൈൽ പൂർത്തിയാക്കാൻ കഴിഞ്ഞില്ല. ദയവായി വീണ്ടും ശ്രമിക്കുക."
+      "completionFailed": "പ്രൊഫൈൽ പൂർത്തിയാക്കാൻ കഴിഞ്ഞില്ല. ദയവായി വീണ്ടും ശ്രമിക്കുക.",
+      "uploadFailed": "അപ്‌ലോഡ് പരാജയപ്പെട്ടു. വീണ്ടും ശ്രമിക്കുക.",
+      "fileTooLarge": "ഫോട്ടോ വളരെ വലുതാണ്. വീണ്ടും ശ്രമിക്കുക."
     }
   },
   "referralScreen": {
@@ -126,11 +165,27 @@
   },
   "profile": {
     "memberSince": "അംഗമായ തീയതി: {{date}}",
-    "appVersion": "Qarmo Partner App v{{version}}",
+    "appVersion": "Qarmo App v{{version}} (Beta)",
     "noVehicles": "വാഹനങ്ങൾ ഒന്നും രജിസ്റ്റർ ചെയ്തിട്ടില്ല.",
     "editProfile": "പ്രൊഫൈൽ തിരുത്തുക",
     "account": "അക്കൗണ്ട്",
-    "customer": "കസ്റ്റമർ"
+    "customer": "കസ്റ്റമർ",
+    "partner": "പാർട്ണർ",
+    "personalInfo": "വ്യക്തിഗത വിവരങ്ങൾ",
+    "accountDetails": "അക്കൗണ്ട് വിവരങ്ങൾ",
+    "documents": "സമർപ്പിച്ച രേഖകൾ",
+    "aadhaarDoc": "ആധാർ കാർഡ്",
+    "licenceDoc": "ഡ്രൈവിംഗ് ലൈസൻസ്",
+    "docUploaded": "അപ്‌ലോഡ് ചെയ്തു",
+    "docPending": "പരിശോധനയ്ക്കായി സംരക്ഷിച്ചു",
+    "accountTypeLabel": "അക്കൗണ്ട് തരം",
+    "partnerTypeLabel": "പാർട്ണർ റോൾ",
+    "operatingCityLabel": "പ്രവർത്തന നഗരം",
+    "vehiclePlateLabel": "വാഹന നമ്പർ",
+    "referralCodeLabel": "റഫറൽ കോഡ്",
+    "phoneNumberLabel": "ഫോൺ നമ്പർ",
+    "fullNameLabel": "പൂർണ്ണമായ പേര്",
+    "appInfo": "ആപ്പ് വിവരങ്ങൾ"
   },
   "counter": {
     "partners": "ഖർമോയിൽ {{count}} പങ്കാളികൾ",
