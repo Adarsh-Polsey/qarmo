@@ -32,6 +32,7 @@ export const CustomerMapScreen: React.FC = () => {
   const mapRef = useRef<MapView>(null);
   const fetchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const fetchCounterRef = useRef(0);
+  const rpcFailedRef = useRef(false); // stop retries if RPC missing
 
   useEffect(() => {
     (async () => {
@@ -62,6 +63,7 @@ export const CustomerMapScreen: React.FC = () => {
   }, []);
 
   const fetchPartnersInRegion = async (region: Region) => {
+    if (rpcFailedRef.current) return; // stop retrying once we know RPC is unavailable
     const fetchId = ++fetchCounterRef.current;
     const min_lat = region.latitude - region.latitudeDelta / 2;
     const max_lat = region.latitude + region.latitudeDelta / 2;
@@ -80,7 +82,8 @@ export const CustomerMapScreen: React.FC = () => {
     }
 
     if (error) {
-      console.error('RPC Error:', error);
+      rpcFailedRef.current = true;
+      console.warn('partners_in_bounds RPC unavailable:', error.message);
       return;
     }
 
