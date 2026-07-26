@@ -35,7 +35,7 @@ export const useWizard = (userId: string | undefined) => {
   const [formData, setFormData] = useState<WizardData>(initialData);
   const [isLoaded, setIsLoaded] = useState<boolean>(false);
 
-  const storageKey = userId ? `@wizard_progress_v2_${userId}` : null;
+  const storageKey = userId ? `wizard_progress_v2_${userId}` : null;
 
   // Load persisted progress from SecureStore when userId is available
   useEffect(() => {

@@ -141,8 +141,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signOut = async () => {
     if (user?.id) {
       try {
+        // Clean up all possible wizard progress keys (old and new formats)
         await SecureStore.deleteItemAsync(`@wizard_progress_${user.id}`);
-        await SecureStore.deleteItemAsync(`@wizard_progress_v2_${user.id}`);
+        await SecureStore.deleteItemAsync(`wizard_progress_v2_${user.id}`);
       } catch (e) {
         console.error('Failed to clear wizard progress on logout:', e);
       }
