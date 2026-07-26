@@ -36,8 +36,8 @@
   },
   "accountType": {
     "title": "ഖർമോ എങ്ങനെ ഉപയോഗിക്കും?",
-    "customer": "യാത്ര വേണം",
-    "partner": "സമ്പാദിക്കണം",
+    "customer": "കസ്റ്റമർ",
+    "partner": "പാർട്ണർ",
     "customerIcon": "🧍",
     "partnerIcon": "🛺"
   },

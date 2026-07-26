@@ -36,8 +36,8 @@
   },
   "accountType": {
     "title": "How will you use Qarmo?",
-    "customer": "I need rides",
-    "partner": "I want to earn",
+    "customer": "Customer",
+    "partner": "Partner",
     "customerIcon": "🧍",
     "partnerIcon": "🛺"
   },

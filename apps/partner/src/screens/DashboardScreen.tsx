@@ -77,20 +77,21 @@ export const DashboardScreen: React.FC<Props> = ({
     );
   }
 
-  // Get vehicle plate if available (from vehicles table... wait we can just fetch it, or it's not in profile)
-  // For beta 2, we just use a placeholder if we don't have it, or fetch it.
-  // Actually, we can fetch the first vehicle for the plate number.
   const [plateNumber, setPlateNumber] = useState<string>('');
 
   useEffect(() => {
     if (!profile) return;
     const fetchVehicle = async () => {
+      if (profile.plate_number) {
+        setPlateNumber(profile.plate_number);
+        return;
+      }
       const { data } = await supabase
         .from('vehicles')
         .select('registration_number')
         .eq('owner_id', profile.id)
         .limit(1)
-        .single();
+        .maybeSingle();
       
       if (data?.registration_number) {
         setPlateNumber(data.registration_number);

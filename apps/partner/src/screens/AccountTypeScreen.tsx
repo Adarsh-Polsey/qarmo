@@ -37,7 +37,7 @@ export const AccountTypeScreen: React.FC<Props> = ({
               {t('accountType.customerIcon', { defaultValue: '🧍' })}
             </Text>
             <Text variant="body" style={styles.cardLabel} color={theme.colors.ink}>
-              {t('accountType.customer', { defaultValue: 'I need rides' })}
+              {t('accountType.customer', { defaultValue: 'Customer' })}
             </Text>
           </TouchableOpacity>
 
@@ -51,7 +51,7 @@ export const AccountTypeScreen: React.FC<Props> = ({
               {t('accountType.partnerIcon', { defaultValue: '🛺' })}
             </Text>
             <Text variant="body" style={styles.cardLabel} color={theme.colors.ink}>
-              {t('accountType.partner', { defaultValue: 'I want to earn' })}
+              {t('accountType.partner', { defaultValue: 'Partner' })}
             </Text>
           </TouchableOpacity>
         </View>
