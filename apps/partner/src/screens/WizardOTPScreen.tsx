@@ -2,11 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   StyleSheet,
   View,
-  SafeAreaView,
   KeyboardAvoidingView,
   Platform,
   TouchableOpacity,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme, Text, Button, Input } from '@qarmo/ui';
 import { useTranslation } from '@qarmo/i18n';
 import { useAuth } from '../hooks/useAuth';

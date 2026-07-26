@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   View,
-  SafeAreaView,
   ScrollView,
   ActivityIndicator,
   Image,
@@ -12,6 +11,7 @@ import {
   Linking,
   Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme, Text, Button, Card, getInitials } from '@qarmo/ui';
 import { useTranslation } from '@qarmo/i18n';
 import { supabase } from '@qarmo/supabase';

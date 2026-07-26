@@ -2,11 +2,11 @@ import React, { useState } from 'react';
 import {
   StyleSheet,
   View,
-  SafeAreaView,
   TouchableOpacity,
   Modal,
   FlatList,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme, Text, Button } from '@qarmo/ui';
 import { useTranslation } from '@qarmo/i18n';
 import { CITIES } from '@qarmo/core';

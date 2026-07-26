@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   StyleSheet,
-  SafeAreaView,
   View,
   KeyboardAvoidingView,
   Platform,
@@ -10,6 +9,7 @@ import {
   ScrollView,
   TextInput,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme, Text, Button, Input } from '@qarmo/ui';
 import { useTranslation, i18n } from '@qarmo/i18n';
 import { APP_VERSION, DEFAULT_COUNTRY_CODE } from '@qarmo/core';

@@ -2,12 +2,12 @@ import React from 'react';
 import {
   StyleSheet,
   View,
-  SafeAreaView,
   Image,
   TouchableOpacity,
   Alert,
   Linking,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme, Text, Button } from '@qarmo/ui';
 import { useTranslation } from '@qarmo/i18n';
 import * as ImagePicker from 'expo-image-picker';

@@ -2,10 +2,10 @@ import React from 'react';
 import {
   StyleSheet,
   View,
-  SafeAreaView,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme, Text, Button, Input } from '@qarmo/ui';
 import { useTranslation } from '@qarmo/i18n';
 import { WizardData } from '../hooks/useWizard';

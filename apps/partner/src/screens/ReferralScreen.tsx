@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   StyleSheet,
   View,
-  SafeAreaView,
   ScrollView,
   TouchableOpacity,
   Clipboard,
@@ -11,6 +10,7 @@ import {
   RefreshControl,
   Image,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme, Text, Button, Card, getInitials, formatDate, withTimeout } from '@qarmo/ui';
 import { useTranslation } from '@qarmo/i18n';
 import { supabase } from '@qarmo/supabase';

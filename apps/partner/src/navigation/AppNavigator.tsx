@@ -2,12 +2,12 @@ import React, { useState } from 'react';
 import {
   StyleSheet,
   View,
-  SafeAreaView,
   ActivityIndicator,
   TouchableOpacity,
   Platform,
   Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme, Text, Button } from '@qarmo/ui';
 import { useTranslation } from '@qarmo/i18n';
 import { useAuth } from '../hooks/useAuth';

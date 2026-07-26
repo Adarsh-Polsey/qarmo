@@ -2,9 +2,9 @@ import React from 'react';
 import {
   StyleSheet,
   View,
-  SafeAreaView,
   TouchableOpacity,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme, Text } from '@qarmo/ui';
 import { useTranslation } from '@qarmo/i18n';
 
