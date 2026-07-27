@@ -113,6 +113,22 @@ export const AppNavigator: React.FC = () => {
   // Whether user came through "Log in" (vs "Register")
   const [isLoginMode, setIsLoginMode] = useState(false);
 
+  // These are local UI state, not auth state — signOut() (in useAuth) has no way to
+  // reset them itself. Without this, signing out leaves preAuthScreen wherever it was
+  // last (e.g. 'otp'), so the very next unauthenticated render reuses that stale value
+  // instead of starting over from Landing. resetWizard() is included too: signOut()
+  // already clears the *persisted* wizard progress, but the in-memory formData/step
+  // here would otherwise still hold the previous account's name/photo/etc. if someone
+  // registers a different account right after logging out.
+  useEffect(() => {
+    if (user) return;
+    setPreAuthScreen('landing');
+    setOtpPhone('');
+    setIsLoginMode(false);
+    setActiveTab('home');
+    resetWizard();
+  }, [user, resetWizard]);
+
   const { locationError } = usePartnerLocation();
 
   // Going back from the first wizard step would otherwise silently sign the user out
@@ -679,6 +695,7 @@ export const AppNavigator: React.FC = () => {
       case PartnerStep.Aadhaar:
         return (
           <WizardDocumentScreen
+            key="aadhaar"
             docType="aadhaar"
             fieldKey="aadhaarUri"
             formData={formData}
@@ -693,6 +710,7 @@ export const AppNavigator: React.FC = () => {
       case PartnerStep.DrivingLicence:
         return (
           <WizardDocumentScreen
+            key="driving_licence"
             docType="driving_licence"
             fieldKey="drivingLicenceUri"
             formData={formData}

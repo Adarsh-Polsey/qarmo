@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { safeSecureStore as SecureStore } from '@qarmo/supabase';
 
 export interface WizardData {
@@ -83,7 +83,10 @@ export const useWizard = (userId: string | undefined) => {
     saveProgress(nextStep, formData);
   };
 
-  const resetWizard = async () => {
+  // Memoized (unlike updateFormData/setStep above) so its identity is stable across
+  // renders whenever storageKey doesn't change — callers can safely put it in a
+  // useEffect dependency array without the effect re-firing on every render.
+  const resetWizard = useCallback(async () => {
     setStepState(1);
     setFormData(initialData);
     if (storageKey) {
@@ -93,7 +96,7 @@ export const useWizard = (userId: string | undefined) => {
         console.error('Failed to clear wizard progress from storage:', e);
       }
     }
-  };
+  }, [storageKey]);
 
   return {
     step,
