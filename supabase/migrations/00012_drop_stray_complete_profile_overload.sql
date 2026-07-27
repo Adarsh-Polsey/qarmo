@@ -1,0 +1,88 @@
+-- 00012_drop_stray_complete_profile_overload.sql
+--
+-- Drops public.complete_profile(user_id uuid) — a single-argument overload that
+-- exists live but is defined in neither this repo's migration history nor any
+-- other version-controlled source. It's leftover from an earlier, abandoned design
+-- of the profile-completion flow (no full_name/photo_url/roles/city/vehicles/
+-- referral_code params — just marks profile_completed_at, generates a referral
+-- code, and awards any pending referral for that user_id).
+--
+-- Confirmed via full-repo grep on 2026-07-27: nothing in the app or edge functions
+-- calls complete_profile with a single user_id argument — the only caller
+-- (supabase/functions/complete-profile) always calls the 7-argument overload.
+--
+-- This was also a live IDOR-class exposure until 00010 revoked its PUBLIC execute
+-- grant: it took a client-suppliable user_id with no auth.uid() check, so anyone
+-- with anon/authenticated access could complete or corrupt an arbitrary other
+-- user's profile and trigger referral point awarding. Grants are already revoked;
+-- this migration removes the dead function entirely.
+--
+-- Full definition preserved here for the record, in case it's ever needed again:
+--
+-- CREATE OR REPLACE FUNCTION public.complete_profile(user_id uuid)
+--  RETURNS jsonb
+--  LANGUAGE plpgsql
+--  SECURITY DEFINER
+--  SET search_path TO 'public'
+-- AS $function$
+-- declare
+--   ref_code text;
+--   code_ok boolean := false;
+--   already_completed timestamptz;
+--   existing_code text;
+--   referred_row record;
+-- begin
+--   select profile_completed_at, referral_code
+--   into already_completed, existing_code
+--   from public.profiles
+--   where id = user_id;
+--
+--   if already_completed is not null then
+--     return jsonb_build_object('success', true, 'referral_code', existing_code);
+--   end if;
+--
+--   while not code_ok loop
+--     ref_code := '';
+--     for i in 1..6 loop
+--       ref_code := ref_code || substr('ABCDEFGHJKLMNPQRSTUVWXYZ23456789', floor(random() * 32 + 1)::int, 1);
+--     end loop;
+--     select not exists(select 1 from public.profiles where referral_code = ref_code) into code_ok;
+--   end loop;
+--
+--   update public.profiles
+--   set
+--     profile_completed_at = now(),
+--     referral_code = ref_code
+--   where id = user_id;
+--
+--   select * into referred_row
+--   from public.referrals
+--   where referred_id = user_id and status = 'pending'
+--   for update;
+--
+--   if referred_row.id is not null then
+--     if exists (select 1 from public.profiles where id = referred_row.referrer_id) then
+--       update public.referrals
+--       set
+--         status = 'awarded',
+--         points_awarded = 50,
+--         awarded_at = now()
+--       where id = referred_row.id;
+--     end if;
+--   end if;
+--
+--   return jsonb_build_object('success', true, 'referral_code', ref_code);
+-- end;
+-- $function$;
+
+begin;
+
+drop function if exists public.complete_profile(uuid);
+
+commit;
+
+-- ─── Verify after running ──────────────────────────────────────────────────────
+-- select pg_get_function_identity_arguments(oid) from pg_proc
+--   where proname = 'complete_profile';
+-- -- should return exactly one row: "user_id uuid, full_name text, photo_url text,
+-- -- roles text[], city text, vehicles jsonb, referral_code text"
