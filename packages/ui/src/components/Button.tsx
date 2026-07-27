@@ -44,7 +44,6 @@ export const Button: React.FC<ButtonProps> = ({
     variant === 'secondary' && styles.secondary,
     variant === 'ghost' && styles.ghost,
     disabled && styles.disabled,
-    style,
   ];
 
   const labelColor =
@@ -62,6 +61,7 @@ export const Button: React.FC<ButtonProps> = ({
       disabled={disabled || loading}
       onPressIn={() => animateTo(0.96)}
       onPressOut={() => animateTo(1)}
+      style={style}
     >
       <Animated.View style={[containerStyle, { transform: [{ scale }] }]}>
         {loading ? (

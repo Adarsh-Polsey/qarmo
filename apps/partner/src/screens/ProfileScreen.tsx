@@ -18,7 +18,7 @@ import { supabase } from '@qarmo/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { APP_VERSION } from '@qarmo/core';
 import * as ImagePicker from 'expo-image-picker';
-import { compressImage } from '../utils/image';
+import { compressImage, uriToUploadBody } from '../utils/image';
 
 interface DocStatus {
   doc_type: string;
@@ -154,13 +154,12 @@ export const ProfileScreen: React.FC = () => {
       if (!result.canceled && result.assets?.length > 0) {
         setUpdatingAvatar(true);
         const compressedUri = await compressImage(result.assets[0].uri, 800, 0.7);
-        const response = await fetch(compressedUri);
-        const blob = await response.blob();
+        const body = await uriToUploadBody(compressedUri);
         const fileName = `${profile.id}/profile.jpg`;
 
         const { error: uploadErr } = await supabase.storage
           .from('avatars')
-          .upload(fileName, blob, { contentType: 'image/jpeg', upsert: true });
+          .upload(fileName, body, { contentType: 'image/jpeg', upsert: true });
 
         if (uploadErr) throw new Error('Failed to upload photo: ' + uploadErr.message);
 

@@ -40,7 +40,7 @@ import { ComingSoonScreen } from '../screens/ComingSoonScreen';
 
 import { Ionicons } from '@expo/vector-icons';
 import { usePartnerLocation } from '../hooks/usePartnerLocation';
-import { compressImage } from '../utils/image';
+import { compressImage, uriToUploadBody } from '../utils/image';
 import { logger } from '../utils/logger';
 
 const TAG = 'Wizard';
@@ -514,16 +514,15 @@ export const AppNavigator: React.FC = () => {
         const donePhoto = logger.time(TAG, 'Upload avatar photo');
         try {
           const compressedPhotoUri = await compressImage(formData.photoUri, 800, 0.7);
-          const response = await fetch(compressedPhotoUri);
-          const blob = await response.blob();
+          const body = await uriToUploadBody(compressedPhotoUri);
           const fileName = `${user.id}/profile.jpg`;
           const { error: uploadErr } = await supabase.storage
             .from('avatars')
-            .upload(fileName, blob, { contentType: 'image/jpeg', upsert: true });
+            .upload(fileName, body, { contentType: 'image/jpeg', upsert: true });
           if (uploadErr) throw new Error('Failed to upload photo: ' + uploadErr.message);
           const { data: publicUrlData } = supabase.storage.from('avatars').getPublicUrl(fileName);
           avatarPath = publicUrlData.publicUrl;
-          donePhoto('ok', { blobSize: blob.size });
+          donePhoto('ok', { bodySize: body instanceof ArrayBuffer ? body.byteLength : body.size });
         } catch (photoErr: any) {
           console.warn('Photo upload warning:', photoErr.message);
           donePhoto('fail', { message: photoErr?.message });
@@ -535,14 +534,14 @@ export const AppNavigator: React.FC = () => {
         const doneDoc = logger.time(TAG, `Upload document (${docType})`);
         try {
           const compressedDocUri = await compressImage(uri, 1200, 0.75);
-          const response = await fetch(compressedDocUri);
-          const blob = await response.blob();
+          const body = await uriToUploadBody(compressedDocUri);
+          const bodySize = body instanceof ArrayBuffer ? body.byteLength : body.size;
           const ext = 'jpg';
           const storagePath = `${user.id}/${docType}.${ext}`;
 
           let { error: uploadErr } = await supabase.storage
             .from('partner-documents')
-            .upload(storagePath, blob, { contentType: 'image/jpeg', upsert: true });
+            .upload(storagePath, body, { contentType: 'image/jpeg', upsert: true });
 
           // Fallback to 'avatars' bucket if 'partner-documents' bucket does not exist on Supabase yet
           if (uploadErr && (uploadErr.message?.includes('not found') || uploadErr.message?.includes('Bucket'))) {
@@ -552,16 +551,16 @@ export const AppNavigator: React.FC = () => {
             const fallbackPath = `${user.id}/docs/${docType}.${ext}`;
             const { error: fallbackErr } = await supabase.storage
               .from('avatars')
-              .upload(fallbackPath, blob, { contentType: 'image/jpeg', upsert: true });
+              .upload(fallbackPath, body, { contentType: 'image/jpeg', upsert: true });
 
             if (!fallbackErr) {
-              doneDoc('ok', { path: fallbackPath, viaFallbackBucket: true, blobSize: blob.size });
+              doneDoc('ok', { path: fallbackPath, viaFallbackBucket: true, bodySize });
               return fallbackPath;
             }
           }
 
           if (uploadErr) throw new Error(`Failed to upload ${docType}: ` + uploadErr.message);
-          doneDoc('ok', { path: storagePath, blobSize: blob.size });
+          doneDoc('ok', { path: storagePath, bodySize });
           return storagePath;
         } catch (err: any) {
           console.warn(`Doc upload warning for ${docType}:`, err.message);
@@ -668,7 +667,18 @@ export const AppNavigator: React.FC = () => {
         });
 
         if (funcError || (funcData as any)?.error) {
-          const message = funcError?.message || (funcData as any)?.error;
+          let message = funcError?.message || (funcData as any)?.error;
+          // FunctionsHttpError.context is the raw Response — the generic .message
+          // ("Edge Function returned a non-2xx status code") hides the function's
+          // actual reason, which is in the response body.
+          if ((funcError as any)?.context?.json) {
+            try {
+              const body = await (funcError as any).context.json();
+              message = body?.error || message;
+            } catch {
+              // context body wasn't JSON — keep the generic message
+            }
+          }
           console.warn('complete-profile function warning:', message);
           doneEdgeFn('fail', { message });
         } else {

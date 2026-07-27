@@ -1,5 +1,7 @@
+import { Platform } from 'react-native';
 import * as FileSystem from 'expo-file-system/legacy';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
+import { decode } from 'base64-arraybuffer';
 
 /**
  * Compresses an image at `uri` to be safely under 500KB across Native and Web.
@@ -51,4 +53,23 @@ export const compressImage = async (
   }
 
   return currentUri;
+};
+
+/**
+ * Reads a local file `uri` into a body suitable for `supabase.storage...upload()`.
+ *
+ * On native, `fetch(uri).then(r => r.blob())` for a local file is a known source of
+ * "Network request failed" on Android — the failure is in RN's blob bridge reading the
+ * local file, not in any actual network call. Reading the file as base64 and decoding
+ * to an ArrayBuffer bypasses that bridge entirely (this is Supabase's own documented
+ * pattern for React Native uploads). On web, `uri` is a blob:/data: URL that fetch
+ * already handles natively, so there's no bridge to work around.
+ */
+export const uriToUploadBody = async (uri: string): Promise<Blob | ArrayBuffer> => {
+  if (Platform.OS === 'web') {
+    const response = await fetch(uri);
+    return await response.blob();
+  }
+  const base64 = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
+  return decode(base64);
 };
