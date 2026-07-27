@@ -83,7 +83,7 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radius.md,
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: theme.colors.border,
     paddingVertical: theme.spacing.xl,
     paddingHorizontal: theme.spacing.lg,
@@ -91,18 +91,13 @@ const styles = StyleSheet.create({
     gap: theme.spacing.md,
     minHeight: 140,
     justifyContent: 'center',
-    // shadows
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 3,
   },
   cardIcon: {
     fontSize: 44,
   },
   cardLabel: {
-    fontWeight: '700',
+    fontFamily: theme.fonts.medium,
+    fontWeight: '500',
     fontSize: 20,
     textAlign: 'center',
   },

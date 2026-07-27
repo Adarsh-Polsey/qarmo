@@ -10,6 +10,9 @@ import {
   safeSecureStore as SecureStore,
 } from '@qarmo/supabase';
 import { DEFAULT_COUNTRY_CODE } from '@qarmo/core';
+import { logger } from '../utils/logger';
+
+const TAG = 'Auth';
 
 // Define profile type from supabase schema
 export interface UserProfile {
@@ -64,6 +67,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const skipNextProfileFetchForUserIdRef = useRef<string | null>(null);
 
   const fetchProfile = async (userId: string): Promise<UserProfile | null> => {
+    const done = logger.time(TAG, `fetchProfile(${userId})`);
     try {
       setIsCheckingProfile(true);
       // maybeSingle (not single): a brand-new signup may not have a profiles row yet
@@ -73,13 +77,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (error) {
         console.warn('Profile fetch warning/error:', error.message);
         setProfileFetchError(true);
+        done('fail', { code: error.code, message: error.message });
         return null;
       }
       setProfileFetchError(false);
+      done('ok', {
+        found: !!data,
+        accountType: data?.account_type ?? null,
+        profileCompleted: !!data?.profile_completed_at,
+      });
       return data as UserProfile | null;
-    } catch (e) {
+    } catch (e: any) {
       console.error('Failed to fetch profile:', e);
       setProfileFetchError(true);
+      done('fail', { message: e?.message });
       return null;
     } finally {
       setIsCheckingProfile(false);
@@ -94,11 +105,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
+    logger.info(TAG, 'Checking for an existing session...');
     supabaseGetSession()
       .then(async (activeSession) => {
         setSession(activeSession);
         const currentUser = activeSession?.user ?? null;
         setUser(currentUser);
+        logger.info(TAG, `Initial session ${currentUser ? 'found' : 'not found'}`, {
+          userId: currentUser?.id ?? null,
+        });
 
         if (currentUser) {
           const userProfile = await fetchProfile(currentUser.id);
@@ -108,18 +123,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       })
       .catch((err) => {
         console.error('Error getting initial session:', err);
+        logger.error(TAG, 'Initial session check threw', { message: err?.message });
         setLoading(false);
       });
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, newSession) => {
-      setSession(newSession);
       const currentUser = newSession?.user ?? null;
+      logger.info(TAG, `onAuthStateChange: ${event}`, { userId: currentUser?.id ?? null });
+      setSession(newSession);
       setUser(currentUser);
 
       if (currentUser) {
         if (skipNextProfileFetchForUserIdRef.current === currentUser.id) {
+          logger.info(TAG, 'Skipping profile re-fetch (already fetched by verifyOTP for this sign-in)');
           skipNextProfileFetchForUserIdRef.current = null;
         } else {
           const userProfile = await fetchProfile(currentUser.id);
@@ -138,10 +156,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const signInWithPhone = async (phone: string) => {
-    return await supabaseSignIn(phone);
+    const done = logger.time(TAG, 'signInWithPhone (send OTP)');
+    try {
+      const result = await supabaseSignIn(phone);
+      done('ok');
+      return result;
+    } catch (e: any) {
+      done('fail', { message: e?.message });
+      throw e;
+    }
   };
 
   const verifyOTP = async (phone: string, token: string) => {
+    const done = logger.time(TAG, 'verifyOTP');
     const data = await supabaseVerify(phone, token);
     const currentUser = data.user ?? null;
     const currentSession = data.session ?? null;
@@ -155,14 +182,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setProfile(userProfile);
     }
 
+    done(currentUser ? 'ok' : 'fail', { userId: currentUser?.id ?? null });
     return { session: currentSession, user: currentUser };
   };
 
   const signOut = async () => {
+    logger.info(TAG, 'signOut', { userId: user?.id ?? null });
     if (user?.id) {
       try {
-        // Clean up all possible wizard progress keys (old and new formats)
-        await SecureStore.deleteItemAsync(`@wizard_progress_${user.id}`);
         await SecureStore.deleteItemAsync(`wizard_progress_v2_${user.id}`);
       } catch (e) {
         console.error('Failed to clear wizard progress on logout:', e);

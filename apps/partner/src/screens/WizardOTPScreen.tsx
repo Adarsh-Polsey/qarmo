@@ -184,7 +184,7 @@ const styles = StyleSheet.create({
   changeLink: { marginBottom: theme.spacing.lg },
   error: { marginTop: theme.spacing.sm },
   resendContainer: { marginTop: theme.spacing.md, alignItems: 'center' },
-  resendText: { fontWeight: '600' },
+  resendText: { fontFamily: theme.fonts.medium, fontWeight: '500' },
   footer: { gap: theme.spacing.sm, alignItems: 'center' },
   btn: { width: '100%' },
 });

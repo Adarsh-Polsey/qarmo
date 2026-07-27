@@ -81,7 +81,7 @@ const styles = StyleSheet.create({
   inputWrapper: {
     height: 56,
     borderRadius: theme.radius.sm,
-    borderWidth: 1.5,
+    borderWidth: 1,
     backgroundColor: theme.colors.surface,
     paddingHorizontal: theme.spacing.md,
     justifyContent: 'center',

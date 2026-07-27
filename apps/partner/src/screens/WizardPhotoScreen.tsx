@@ -215,7 +215,7 @@ const styles = StyleSheet.create({
   },
   pickerBtn: {
     flex: 1,
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: theme.colors.primary,
     borderRadius: theme.radius.sm,
     paddingVertical: theme.spacing.md,
@@ -226,7 +226,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   pickerIcon: { fontSize: 24 },
-  pickerLabel: { fontWeight: '600', textAlign: 'center' },
+  pickerLabel: { fontFamily: theme.fonts.medium, fontWeight: '500', textAlign: 'center' },
   retakeHint: { marginBottom: theme.spacing.sm },
   hint: { marginTop: theme.spacing.sm },
   footer: { gap: theme.spacing.sm, alignItems: 'center' },

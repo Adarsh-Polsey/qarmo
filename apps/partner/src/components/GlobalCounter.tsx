@@ -92,7 +92,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   text: {
-    fontWeight: '600',
+    fontFamily: theme.fonts.medium,
+    fontWeight: '500',
     color: theme.colors.ink,
   },
 });

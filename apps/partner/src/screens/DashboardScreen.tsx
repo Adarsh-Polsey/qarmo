@@ -208,8 +208,9 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.surface,
   },
   placeholderText: {
+    fontFamily: theme.fonts.medium,
     fontSize: 24,
-    fontWeight: 'bold',
+    fontWeight: '500',
     color: theme.colors.mutedText,
   },
   idDetails: {
@@ -223,16 +224,19 @@ const styles = StyleSheet.create({
   },
   pointsText: {
     color: '#1B7A3D', // Kerala Green
+    fontFamily: theme.fonts.medium,
     fontSize: 40,
-    fontWeight: '800',
+    fontWeight: '500',
   },
   referredText: {
+    fontFamily: theme.fonts.medium,
     fontSize: 16,
     fontWeight: '500',
   },
   codeText: {
+    fontFamily: theme.fonts.medium,
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '500',
     marginTop: theme.spacing.xs,
   },
   shareBtn: {
@@ -245,7 +249,8 @@ const styles = StyleSheet.create({
   },
   shareBtnText: {
     color: theme.colors.ink,
-    fontWeight: '700',
+    fontFamily: theme.fonts.medium,
+    fontWeight: '500',
     fontSize: 16,
   },
 });

@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import {
-  TouchableOpacity,
+  Animated,
+  Pressable,
   StyleSheet,
   ActivityIndicator,
   ViewStyle,
@@ -26,6 +27,17 @@ export const Button: React.FC<ButtonProps> = ({
   loading = false,
   style,
 }) => {
+  const scale = useRef(new Animated.Value(1)).current;
+
+  const animateTo = (toValue: number) => {
+    Animated.spring(scale, {
+      toValue,
+      useNativeDriver: true,
+      speed: 40,
+      bounciness: 6,
+    }).start();
+  };
+
   const containerStyle = [
     styles.button,
     variant === 'primary' && styles.primary,
@@ -45,23 +57,25 @@ export const Button: React.FC<ButtonProps> = ({
           : theme.colors.primary;
 
   return (
-    <TouchableOpacity
+    <Pressable
       onPress={onPress}
       disabled={disabled || loading}
-      activeOpacity={0.8}
-      style={containerStyle}
+      onPressIn={() => animateTo(0.96)}
+      onPressOut={() => animateTo(1)}
     >
-      {loading ? (
-        <ActivityIndicator
-          color={variant === 'primary' ? theme.colors.background : theme.colors.primary}
-          size="small"
-        />
-      ) : (
-        <Text variant="button" color={labelColor}>
-          {label}
-        </Text>
-      )}
-    </TouchableOpacity>
+      <Animated.View style={[containerStyle, { transform: [{ scale }] }]}>
+        {loading ? (
+          <ActivityIndicator
+            color={variant === 'primary' ? theme.colors.background : theme.colors.primary}
+            size="small"
+          />
+        ) : (
+          <Text variant="button" color={labelColor}>
+            {label}
+          </Text>
+        )}
+      </Animated.View>
+    </Pressable>
   );
 };
 
@@ -78,8 +92,8 @@ const styles = StyleSheet.create({
   },
   secondary: {
     backgroundColor: theme.colors.background,
-    borderWidth: 1.5,
-    borderColor: theme.colors.ink,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
   ghost: {
     backgroundColor: 'transparent',

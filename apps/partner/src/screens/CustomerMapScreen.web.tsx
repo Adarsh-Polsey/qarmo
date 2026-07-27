@@ -91,7 +91,8 @@ const styles = StyleSheet.create({
   },
   title: {
     textAlign: 'center',
-    fontWeight: '700',
+    fontFamily: theme.fonts.medium,
+    fontWeight: '500',
     marginBottom: theme.spacing.md,
     color: theme.colors.ink,
   },

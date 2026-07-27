@@ -537,7 +537,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: theme.spacing.lg,
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: theme.colors.border,
   },
   avatarTouchable: {
@@ -565,8 +565,9 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.surface,
   },
   placeholderText: {
+    fontFamily: theme.fonts.medium,
     fontSize: 28,
-    fontWeight: 'bold',
+    fontWeight: '500',
     color: theme.colors.mutedText,
   },
   avatarLoadingOverlay: {
@@ -601,8 +602,9 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   nameText: {
+    fontFamily: theme.fonts.medium,
     fontSize: 22,
-    fontWeight: '700',
+    fontWeight: '500',
   },
   editNameIcon: {
     fontSize: 14,
@@ -618,7 +620,8 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
   changePhotoText: {
-    fontWeight: '600',
+    fontFamily: theme.fonts.medium,
+    fontWeight: '500',
     fontSize: 13,
     textDecorationLine: 'underline',
     marginTop: 2,
@@ -636,17 +639,19 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.border,
   },
   badgeText: {
-    fontWeight: '600',
+    fontFamily: theme.fonts.medium,
+    fontWeight: '500',
     fontSize: 13,
     color: theme.colors.ink,
   },
   sectionCard: {
     padding: theme.spacing.lg,
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: theme.colors.border,
   },
   sectionHeader: {
-    fontWeight: '700',
+    fontFamily: theme.fonts.medium,
+    fontWeight: '500',
     fontSize: 18,
     marginBottom: theme.spacing.md,
   },
@@ -657,11 +662,13 @@ const styles = StyleSheet.create({
     paddingVertical: theme.spacing.xs,
   },
   detailLabel: {
+    fontFamily: theme.fonts.medium,
     fontWeight: '500',
     fontSize: 15,
   },
   detailValue: {
-    fontWeight: '600',
+    fontFamily: theme.fonts.medium,
+    fontWeight: '500',
     fontSize: 15,
     textAlign: 'right',
   },
@@ -676,11 +683,13 @@ const styles = StyleSheet.create({
     gap: theme.spacing.xs,
   },
   referralCodeVal: {
-    fontWeight: '700',
+    fontFamily: theme.fonts.medium,
+    fontWeight: '500',
     color: theme.colors.primaryPressed,
   },
   shareText: {
-    fontWeight: '600',
+    fontFamily: theme.fonts.medium,
+    fontWeight: '500',
     textDecorationLine: 'underline',
   },
   docRow: {
@@ -698,7 +707,8 @@ const styles = StyleSheet.create({
     fontSize: 20,
   },
   docTitle: {
-    fontWeight: '600',
+    fontFamily: theme.fonts.medium,
+    fontWeight: '500',
     fontSize: 16,
   },
   docBadge: {
@@ -714,11 +724,13 @@ const styles = StyleSheet.create({
   },
   docTextUploaded: {
     color: '#1B7A3D',
-    fontWeight: '700',
+    fontFamily: theme.fonts.medium,
+    fontWeight: '500',
     fontSize: 13,
   },
   docTextPending: {
     color: theme.colors.mutedText,
+    fontFamily: theme.fonts.medium,
     fontWeight: '500',
     fontSize: 13,
   },

@@ -7,6 +7,9 @@ import * as Location from 'expo-location';
 import { supabase } from '@qarmo/supabase';
 import { GlobalCounter } from '../components/GlobalCounter';
 import { Ionicons } from '@expo/vector-icons';
+import { logger } from '../utils/logger';
+
+const TAG = 'Map';
 
 const KOCHI_REGION: Region = {
   latitude: 10.0158605,
@@ -63,13 +66,17 @@ export const CustomerMapScreen: React.FC = () => {
   }, []);
 
   const fetchPartnersInRegion = async (region: Region) => {
-    if (rpcFailedRef.current) return; // stop retrying once we know RPC is unavailable
+    if (rpcFailedRef.current) {
+      logger.info(TAG, 'Skipping partners_in_bounds fetch — RPC already known unavailable this session');
+      return;
+    }
     const fetchId = ++fetchCounterRef.current;
     const min_lat = region.latitude - region.latitudeDelta / 2;
     const max_lat = region.latitude + region.latitudeDelta / 2;
     const min_lng = region.longitude - region.longitudeDelta / 2;
     const max_lng = region.longitude + region.longitudeDelta / 2;
 
+    const done = logger.time(TAG, `fetchPartnersInRegion (fetchId=${fetchId})`);
     const { data, error } = await supabase.rpc('partners_in_bounds', {
       min_lng,
       min_lat,
@@ -78,18 +85,23 @@ export const CustomerMapScreen: React.FC = () => {
     });
 
     if (fetchId !== fetchCounterRef.current) {
+      logger.info(TAG, `fetchId=${fetchId} superseded by a newer region change — discarding result`);
       return;
     }
 
     if (error) {
       rpcFailedRef.current = true;
       console.warn('partners_in_bounds RPC unavailable:', error.message);
+      done('fail', { message: error.message });
       return;
     }
 
     if (data) {
       setPartners(data as PartnerPin[]);
       setShowZoomHint(data.length >= 100);
+      done('ok', { partnerCount: data.length });
+    } else {
+      done('ok', { partnerCount: 0 });
     }
   };
 
@@ -201,7 +213,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   bannerAction: {
-    fontWeight: '700',
+    fontFamily: theme.fonts.medium,
+    fontWeight: '500',
   },
   markerContainer: {
     width: 32,
@@ -227,6 +240,7 @@ const styles = StyleSheet.create({
   },
   hintText: {
     color: '#FFFFFF',
-    fontWeight: '600',
+    fontFamily: theme.fonts.medium,
+    fontWeight: '500',
   },
 });

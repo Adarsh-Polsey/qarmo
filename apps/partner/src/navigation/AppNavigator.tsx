@@ -41,6 +41,9 @@ import { ComingSoonScreen } from '../screens/ComingSoonScreen';
 import { Ionicons } from '@expo/vector-icons';
 import { usePartnerLocation } from '../hooks/usePartnerLocation';
 import { compressImage } from '../utils/image';
+import { logger } from '../utils/logger';
+
+const TAG = 'Wizard';
 
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -445,6 +448,7 @@ export const AppNavigator: React.FC = () => {
 
       const handleCustomerFinish = async () => {
         if (!user) return;
+        const done = logger.time(TAG, 'handleCustomerFinish');
         try {
           let { error } = await supabase.from('profiles').update({
             full_name: formData.fullName,
@@ -454,6 +458,7 @@ export const AppNavigator: React.FC = () => {
 
           // Fallback if account_type column does not exist on Supabase DB schema yet
           if (error && (error.code === 'PGRST204' || error.message?.includes('account_type'))) {
+            logger.warn(TAG, 'Direct update missing account_type column — retrying without it', { code: error.code });
             const fallbackRes = await supabase.from('profiles').update({
               full_name: formData.fullName,
               profile_completed_at: new Date().toISOString(),
@@ -462,10 +467,12 @@ export const AppNavigator: React.FC = () => {
           }
 
           if (error) throw error;
+          done('ok');
           await resetWizard();
           await refreshProfile();
         } catch (err: any) {
           console.error('Customer finish error:', err);
+          done('fail', { message: err?.message });
           Alert.alert(
             t('common.error', { defaultValue: 'Error' }),
             err.message || t('wizard.errors.completionFailed', { defaultValue: 'Failed to complete profile.' }),
@@ -491,6 +498,12 @@ export const AppNavigator: React.FC = () => {
 
     const handlePartnerSubmit = async (validReferralCode: string | null) => {
       if (!user) return;
+      logger.info(TAG, 'handlePartnerSubmit — started', {
+        hasPhoto: !!formData.photoUri,
+        hasAadhaar: !!formData.aadhaarUri,
+        hasLicence: !!formData.drivingLicenceUri,
+        hasReferralCode: !!validReferralCode,
+      });
 
       let avatarPath: string | null = null;
 
@@ -498,6 +511,7 @@ export const AppNavigator: React.FC = () => {
       // uploads below: a flaky upload here shouldn't block the rest of registration,
       // since the profile update step already tolerates a null avatarPath).
       if (formData.photoUri) {
+        const donePhoto = logger.time(TAG, 'Upload avatar photo');
         try {
           const compressedPhotoUri = await compressImage(formData.photoUri, 800, 0.7);
           const response = await fetch(compressedPhotoUri);
@@ -509,38 +523,49 @@ export const AppNavigator: React.FC = () => {
           if (uploadErr) throw new Error('Failed to upload photo: ' + uploadErr.message);
           const { data: publicUrlData } = supabase.storage.from('avatars').getPublicUrl(fileName);
           avatarPath = publicUrlData.publicUrl;
+          donePhoto('ok', { blobSize: blob.size });
         } catch (photoErr: any) {
           console.warn('Photo upload warning:', photoErr.message);
+          donePhoto('fail', { message: photoErr?.message });
         }
       }
 
       // 2. Upload documents to partner-documents bucket (fallback to avatars if bucket migration not run)
       const uploadDoc = async (uri: string, docType: 'aadhaar' | 'driving_licence') => {
+        const doneDoc = logger.time(TAG, `Upload document (${docType})`);
         try {
           const compressedDocUri = await compressImage(uri, 1200, 0.75);
           const response = await fetch(compressedDocUri);
           const blob = await response.blob();
           const ext = 'jpg';
           const storagePath = `${user.id}/${docType}.${ext}`;
-          
+
           let { error: uploadErr } = await supabase.storage
             .from('partner-documents')
             .upload(storagePath, blob, { contentType: 'image/jpeg', upsert: true });
 
           // Fallback to 'avatars' bucket if 'partner-documents' bucket does not exist on Supabase yet
           if (uploadErr && (uploadErr.message?.includes('not found') || uploadErr.message?.includes('Bucket'))) {
+            logger.warn(TAG, `partner-documents bucket unavailable for ${docType} — falling back to avatars bucket`, {
+              message: uploadErr.message,
+            });
             const fallbackPath = `${user.id}/docs/${docType}.${ext}`;
             const { error: fallbackErr } = await supabase.storage
               .from('avatars')
               .upload(fallbackPath, blob, { contentType: 'image/jpeg', upsert: true });
-            
-            if (!fallbackErr) return fallbackPath;
+
+            if (!fallbackErr) {
+              doneDoc('ok', { path: fallbackPath, viaFallbackBucket: true, blobSize: blob.size });
+              return fallbackPath;
+            }
           }
 
           if (uploadErr) throw new Error(`Failed to upload ${docType}: ` + uploadErr.message);
+          doneDoc('ok', { path: storagePath, blobSize: blob.size });
           return storagePath;
         } catch (err: any) {
           console.warn(`Doc upload warning for ${docType}:`, err.message);
+          doneDoc('fail', { message: err?.message });
           return null;
         }
       };
@@ -595,6 +620,7 @@ export const AppNavigator: React.FC = () => {
       };
 
       // 5. Direct database update on profiles table as a baseline guarantee
+      const doneDirectUpdate = logger.time(TAG, 'Direct profile update (baseline)');
       let { error: directUpdateErr } = await supabase.from('profiles').update({
         full_name: formData.fullName,
         city: formData.city,
@@ -607,6 +633,9 @@ export const AppNavigator: React.FC = () => {
       }).eq('id', user.id);
 
       if (directUpdateErr && (directUpdateErr.code === 'PGRST204' || directUpdateErr.message?.includes('column'))) {
+        logger.warn(TAG, 'Direct update hit a missing column — retrying with the base column set', {
+          code: directUpdateErr.code,
+        });
         // Fallback update for standard profiles columns if new schema columns are missing
         const fallbackRes = await supabase.from('profiles').update({
           full_name: formData.fullName,
@@ -619,9 +648,13 @@ export const AppNavigator: React.FC = () => {
 
       if (directUpdateErr) {
         console.warn('Direct profile update warning:', directUpdateErr.message);
+        doneDirectUpdate('fail', { message: directUpdateErr.message });
+      } else {
+        doneDirectUpdate('ok');
       }
 
       // 6. Invoke complete-profile edge function (for referrals & vehicle insertion)
+      const doneEdgeFn = logger.time(TAG, 'Invoke complete-profile edge function');
       try {
         const { data: funcData, error: funcError } = await supabase.functions.invoke('complete-profile', {
           body: {
@@ -635,12 +668,18 @@ export const AppNavigator: React.FC = () => {
         });
 
         if (funcError || (funcData as any)?.error) {
-          console.warn('complete-profile function warning:', funcError?.message || (funcData as any)?.error);
+          const message = funcError?.message || (funcData as any)?.error;
+          console.warn('complete-profile function warning:', message);
+          doneEdgeFn('fail', { message });
+        } else {
+          doneEdgeFn('ok', { referralCode: (funcData as any)?.referral_code ?? null });
         }
       } catch (funcErr: any) {
         console.warn('Edge function invoke exception:', funcErr.message);
+        doneEdgeFn('fail', { message: funcErr?.message });
       }
 
+      logger.info(TAG, 'handlePartnerSubmit — finished, resetting wizard');
       await resetWizard();
       await refreshProfile();
     };
@@ -853,11 +892,6 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.background,
     paddingBottom: Platform.OS === 'ios' ? 16 : 8,
     paddingTop: 8,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 8,
   },
   tabItem: {
     flex: 1,
@@ -865,8 +899,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   tabLabel: {
+    fontFamily: theme.fonts.medium,
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '500',
     marginTop: 4,
   },
 });

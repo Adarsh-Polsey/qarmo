@@ -27,7 +27,10 @@
       "Bash(supabase projects *)",
       "Bash(supabase link *)",
       "Bash(supabase migration *)",
-      "Bash(supabase db *)"
+      "Bash(supabase db *)",
+      "Bash(supabase --help)",
+      "Bash(supabase functions *)",
+      "Bash(supabase secrets *)"
     ]
   },
   "enabledPlugins": {

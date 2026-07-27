@@ -93,10 +93,12 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.sm,
   },
   registerText: {
+    fontFamily: theme.fonts.medium,
     fontSize: 20,
-    fontWeight: '700',
+    fontWeight: '500',
   },
   loginLink: {
+    fontFamily: theme.fonts.medium,
     fontSize: 15,
     fontWeight: '500',
     textDecorationLine: 'underline',
