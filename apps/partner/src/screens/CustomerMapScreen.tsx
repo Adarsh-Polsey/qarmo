@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { StyleSheet, View, Dimensions, Platform, TouchableOpacity, Linking } from 'react-native';
+import { StyleSheet, View, Dimensions, Platform, TouchableOpacity, Linking, ActivityIndicator } from 'react-native';
 import { theme, Text, Button } from '@qarmo/ui';
 import { useTranslation } from '@qarmo/i18n';
 import MapView, { Marker, Region } from 'react-native-maps';
@@ -103,7 +103,14 @@ export const CustomerMapScreen: React.FC = () => {
   }, []);
 
   if (!isReady) {
-    return <View style={styles.container} />; // Or a spinner
+    return (
+      <View style={[styles.container, styles.loadingContainer]}>
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+        <Text variant="caption" color={theme.colors.mutedText} style={styles.loadingText}>
+          {t('map.locating', { defaultValue: 'Finding your location...' })}
+        </Text>
+      </View>
+    );
   }
 
   const openSettings = () => {
@@ -170,6 +177,13 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
+  },
+  loadingContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: theme.spacing.sm,
   },
   map: {
     flex: 1,

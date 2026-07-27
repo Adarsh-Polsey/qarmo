@@ -23,7 +23,11 @@
       "Bash(node -e ' *)",
       "Bash(git show *)",
       "Read(//tmp/**)",
-      "Bash(cp /tmp/orig-metro.config.js /tmp/metro.config.js.bak)"
+      "Bash(cp /tmp/orig-metro.config.js /tmp/metro.config.js.bak)",
+      "Bash(supabase projects *)",
+      "Bash(supabase link *)",
+      "Bash(supabase migration *)",
+      "Bash(supabase db *)"
     ]
   },
   "enabledPlugins": {

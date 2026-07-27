@@ -253,11 +253,20 @@ $$;
 -- grant, but that default can be revoked at the project level. Granting explicitly
 -- removes the ambiguity rather than relying on whatever the project's current
 -- default privileges happen to be.
+--
+-- complete_profile is deliberately excluded from the anon/authenticated grants
+-- below, and its default PUBLIC execute grant is explicitly revoked instead: it
+-- takes a client-suppliable `user_id` with no check that it matches auth.uid(), so
+-- any direct caller (not just the complete-profile edge function) could complete or
+-- corrupt an arbitrary OTHER user's profile and manipulate referral awarding. The
+-- only legitimate caller is supabase/functions/complete-profile, which uses the
+-- service_role key — service_role already has execute independent of these grants,
+-- so this revoke has no effect on the app's actual functionality.
 
 grant execute on function public.partners_in_bounds(double precision, double precision, double precision, double precision) to anon, authenticated;
 grant execute on function public.validate_referral_code(text) to anon, authenticated;
-grant execute on function public.complete_profile(uuid, text, text, text[], text, jsonb, text) to anon, authenticated;
 grant execute on function public.get_partner_count() to anon, authenticated;
+revoke execute on function public.complete_profile(uuid, text, text, text[], text, jsonb, text) from public;
 
 commit;
 

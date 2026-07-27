@@ -494,7 +494,9 @@ export const AppNavigator: React.FC = () => {
 
       let avatarPath: string | null = null;
 
-      // 1. Upload profile photo to avatars bucket
+      // 1. Upload profile photo to avatars bucket (best-effort — same as document
+      // uploads below: a flaky upload here shouldn't block the rest of registration,
+      // since the profile update step already tolerates a null avatarPath).
       if (formData.photoUri) {
         try {
           const compressedPhotoUri = await compressImage(formData.photoUri, 800, 0.7);
@@ -508,7 +510,7 @@ export const AppNavigator: React.FC = () => {
           const { data: publicUrlData } = supabase.storage.from('avatars').getPublicUrl(fileName);
           avatarPath = publicUrlData.publicUrl;
         } catch (photoErr: any) {
-          throw photoErr;
+          console.warn('Photo upload warning:', photoErr.message);
         }
       }
 
