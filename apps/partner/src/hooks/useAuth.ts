@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import {
   supabase,
   signInWithPhone as supabaseSignIn,
@@ -57,6 +57,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isCheckingProfile, setIsCheckingProfile] = useState(false);
   const [profileFetchError, setProfileFetchError] = useState(false);
 
+  // Supabase fires onAuthStateChange('SIGNED_IN') right after verifyOtp() resolves.
+  // verifyOTP() below already fetches the profile itself, so this ref lets the listener
+  // skip re-fetching for that same sign-in — set right before verifyOTP's own fetch,
+  // consumed (and cleared) by the very next matching auth event.
+  const skipNextProfileFetchForUserIdRef = useRef<string | null>(null);
+
   const fetchProfile = async (userId: string): Promise<UserProfile | null> => {
     try {
       setIsCheckingProfile(true);
@@ -113,9 +119,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(currentUser);
 
       if (currentUser) {
-        const userProfile = await fetchProfile(currentUser.id);
-        setProfile(userProfile);
+        if (skipNextProfileFetchForUserIdRef.current === currentUser.id) {
+          skipNextProfileFetchForUserIdRef.current = null;
+        } else {
+          const userProfile = await fetchProfile(currentUser.id);
+          setProfile(userProfile);
+        }
       } else {
+        skipNextProfileFetchForUserIdRef.current = null;
         setProfile(null);
       }
       setLoading(false);
@@ -139,6 +150,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(currentUser);
 
     if (currentUser) {
+      skipNextProfileFetchForUserIdRef.current = currentUser.id;
       const userProfile = await fetchProfile(currentUser.id);
       setProfile(userProfile);
     }

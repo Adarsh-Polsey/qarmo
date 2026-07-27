@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   StyleSheet,
   View,
@@ -223,6 +223,50 @@ export const AppNavigator: React.FC = () => {
     return () => subscription.remove();
   }, [handleHardwareBack]);
 
+  // ───── Web browser back/forward ────────────────────────────────────────────
+  // The URL doesn't reflect the current screen (refresh still lands on Landing) —
+  // this only makes the browser's back/forward buttons step through screens the
+  // same way the Android hardware back button does above, by pushing a history
+  // entry whenever the visible screen changes and replaying handleHardwareBack on
+  // popstate.
+  const currentScreenKey = !user
+    ? `preauth:${preAuthScreen}`
+    : !profile?.profile_completed_at
+    ? `wizard:${step}`
+    : `tab:${activeTab}`;
+
+  const isHandlingPopRef = useRef(false);
+  const lastPushedScreenKeyRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined') return;
+
+    if (isHandlingPopRef.current) {
+      isHandlingPopRef.current = false;
+    } else if (lastPushedScreenKeyRef.current !== null) {
+      window.history.pushState({ screenKey: currentScreenKey }, '');
+    }
+    lastPushedScreenKeyRef.current = currentScreenKey;
+  }, [currentScreenKey]);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined') return;
+
+    const onPopState = () => {
+      isHandlingPopRef.current = true;
+      handleHardwareBack();
+      // Safety net: if handleHardwareBack didn't change any state (e.g. it only opened
+      // a confirm dialog), the effect above never runs to clear this flag — clear it
+      // here so the next real navigation still pushes its own history entry.
+      setTimeout(() => {
+        isHandlingPopRef.current = false;
+      }, 0);
+    };
+
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, [handleHardwareBack]);
+
   // ───── Loading states ─────────────────────────────────────────────────────
 
   if (loading || (user && !isWizardLoaded) || isCheckingProfile) {
@@ -356,11 +400,12 @@ export const AppNavigator: React.FC = () => {
           currentStep={currentStep}
           totalSteps={totalSteps}
           onVerified={() => {
-            // After OTP, the auth state listener in useAuth will set `user`.
-            // If login mode: useAuth will load profile → profile.profile_completed_at set → goes to app.
-            // If register mode: user is set but profile is incomplete → post-OTP wizard steps start.
-            // Set initial wizard step to 1 (post-OTP) — handled below.
-            setStep(1);
+            // No explicit step transition here: verifyOTP() (awaited inside WizardOTPScreen
+            // before this fires) already updated `user`/`profile`, which re-renders this
+            // component into the post-OTP branch below. useWizard's own load effect then
+            // either keeps the default step 1 (brand-new signup) or restores whatever step
+            // was persisted for this user (e.g. a login resuming an incomplete registration).
+            // Forcing setStep(1) here raced that restore and could clobber resumed progress.
           }}
           onBack={() => setPreAuthScreen('phone')}
         />
@@ -690,11 +735,7 @@ export const AppNavigator: React.FC = () => {
       case 'home':
         return isCustomer
           ? <CustomerMapScreen />
-          : <DashboardScreen
-              locationError={locationError}
-              onNavigateToReferrals={() => {}}
-              onNavigateToProfile={() => setActiveTab('profile')}
-            />;
+          : <DashboardScreen locationError={locationError} />;
       case 'tab2':
         return isCustomer
           ? <ComingSoonScreen iconName="hardware-chip-outline" />
@@ -704,11 +745,7 @@ export const AppNavigator: React.FC = () => {
       default:
         return isCustomer
           ? <CustomerMapScreen />
-          : <DashboardScreen
-              locationError={locationError}
-              onNavigateToReferrals={() => {}}
-              onNavigateToProfile={() => setActiveTab('profile')}
-            />;
+          : <DashboardScreen locationError={locationError} />;
     }
   };
 

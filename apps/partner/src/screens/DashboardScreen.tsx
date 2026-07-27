@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   View,
@@ -7,25 +7,19 @@ import {
   TouchableOpacity,
   Image,
   Share,
-  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme, Text, Card, getInitials } from '@qarmo/ui';
 import { useTranslation } from '@qarmo/i18n';
 import { supabase } from '@qarmo/supabase';
 import { useAuth } from '../hooks/useAuth';
-import * as Location from 'expo-location';
 import { GlobalCounter } from '../components/GlobalCounter';
 
 interface Props {
-  onNavigateToReferrals: () => void;
-  onNavigateToProfile: () => void;
   locationError?: boolean;
 }
 
 export const DashboardScreen: React.FC<Props> = ({
-  onNavigateToReferrals,
-  onNavigateToProfile,
   locationError = false,
 }) => {
   const { t } = useTranslation();

@@ -15,7 +15,10 @@
       "Bash(route -n get default)",
       "Bash(/usr/libexec/ApplicationFirewall/socketfilterfw --getglobalstate)",
       "Bash(curl -s -m 5 \"http://192.168.1.12:8081/status\")",
-      "Bash(pkill -f \"expo start\")"
+      "Bash(pkill -f \"expo start\")",
+      "Bash(git remote *)",
+      "Bash(pnpm --filter partner exec tsc --noEmit)",
+      "Bash(pnpm exec *)"
     ]
   },
   "enabledPlugins": {
