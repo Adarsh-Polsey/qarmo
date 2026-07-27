@@ -18,7 +18,12 @@
       "Bash(pkill -f \"expo start\")",
       "Bash(git remote *)",
       "Bash(pnpm --filter partner exec tsc --noEmit)",
-      "Bash(pnpm exec *)"
+      "Bash(pnpm exec *)",
+      "Bash(node -e \"console.log\\(require.resolve\\('expo-file-system/legacy', {paths:[require\\('path'\\).resolve\\('apps/partner'\\)]}\\)\\)\")",
+      "Bash(node -e ' *)",
+      "Bash(git show *)",
+      "Read(//tmp/**)",
+      "Bash(cp /tmp/orig-metro.config.js /tmp/metro.config.js.bak)"
     ]
   },
   "enabledPlugins": {

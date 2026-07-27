@@ -84,7 +84,7 @@ export const WizardDocumentScreen: React.FC<Props> = ({
 
     try {
       const options: ImagePicker.ImagePickerOptions = {
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         allowsEditing: true,
         quality: 0.85,
       };
