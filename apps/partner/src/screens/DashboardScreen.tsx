@@ -58,6 +58,8 @@ export const DashboardScreen: React.FC<Props> = ({
     fetchReferrals();
   }, [profile]);
 
+  const [plateNumber, setPlateNumber] = useState<string>('');
+
   const handleShare = async () => {
     if (!referralCode) return;
     try {
@@ -68,16 +70,6 @@ export const DashboardScreen: React.FC<Props> = ({
       console.error('Error sharing code:', err);
     }
   };
-
-  if (!profile) {
-    return (
-      <SafeAreaView style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={theme.colors.primary} />
-      </SafeAreaView>
-    );
-  }
-
-  const [plateNumber, setPlateNumber] = useState<string>('');
 
   useEffect(() => {
     if (!profile) return;
@@ -92,13 +84,21 @@ export const DashboardScreen: React.FC<Props> = ({
         .eq('owner_id', profile.id)
         .limit(1)
         .maybeSingle();
-      
+
       if (data?.registration_number) {
         setPlateNumber(data.registration_number);
       }
     };
     fetchVehicle();
   }, [profile]);
+
+  if (!profile) {
+    return (
+      <SafeAreaView style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safe}>

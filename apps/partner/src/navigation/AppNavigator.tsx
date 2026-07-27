@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   StyleSheet,
   View,
@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Platform,
   Alert,
+  BackHandler,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme, Text, Button } from '@qarmo/ui';
@@ -92,7 +93,7 @@ enum PartnerStep {
 
 export const AppNavigator: React.FC = () => {
   const { t } = useTranslation();
-  const { user, profile, loading, isCheckingProfile, signOut, refreshProfile } = useAuth();
+  const { user, profile, loading, isCheckingProfile, profileFetchError, signOut, refreshProfile } = useAuth();
 
   const {
     step,
@@ -114,6 +115,114 @@ export const AppNavigator: React.FC = () => {
 
   const { locationError } = usePartnerLocation();
 
+  // Going back from the first wizard step would otherwise silently sign the user out
+  // (they're already OTP-authenticated) — confirm first instead of discarding the session.
+  const confirmDiscardAndSignOut = useCallback(() => {
+    const title = t('wizard.discardConfirmTitle', { defaultValue: 'Sign out?' });
+    const message = t('wizard.discardConfirmMessage', {
+      defaultValue: 'Going back will sign you out — you will need to verify your phone again to continue.',
+    });
+
+    if (Platform.OS === 'web') {
+      if (typeof window !== 'undefined' && window.confirm(`${title}\n\n${message}`)) {
+        signOut();
+      }
+      return;
+    }
+
+    Alert.alert(title, message, [
+      { text: t('common.cancel', { defaultValue: 'Cancel' }), style: 'cancel' },
+      { text: t('auth.logout', { defaultValue: 'Log out' }), style: 'destructive', onPress: () => signOut() },
+    ]);
+  }, [t, signOut]);
+
+  // ───── Android hardware back button ────────────────────────────────────────
+  // Mirrors each screen's own onBack/onOtpSent wiring so the hardware back button
+  // behaves the same as tapping the on-screen back/cancel action.
+  const handleHardwareBack = useCallback((): boolean => {
+    // Main app (tabs) — profile complete
+    if (user && profile?.profile_completed_at) {
+      if (activeTab !== 'home') {
+        setActiveTab('home');
+        return true;
+      }
+      return false; // on Home tab — let the OS handle it (minimize/exit)
+    }
+
+    // Post-OTP wizard steps
+    if (user && !profile?.profile_completed_at) {
+      const isCustomer = formData.accountType === 'customer' ||
+        (profile?.account_type === 'customer' && formData.accountType === '');
+
+      if (isCustomer) {
+        confirmDiscardAndSignOut();
+        return true;
+      }
+
+      switch (step) {
+        case PartnerStep.Name:
+          confirmDiscardAndSignOut();
+          return true;
+        case PartnerStep.Plate:
+          setStep(PartnerStep.Name);
+          return true;
+        case PartnerStep.City:
+          setStep(PartnerStep.Plate);
+          return true;
+        case PartnerStep.Photo:
+          setStep(PartnerStep.City);
+          return true;
+        case PartnerStep.Aadhaar:
+          setStep(PartnerStep.Photo);
+          return true;
+        case PartnerStep.DrivingLicence:
+          setStep(PartnerStep.Aadhaar);
+          return true;
+        case PartnerStep.Referral:
+          setStep(PartnerStep.DrivingLicence);
+          return true;
+        default:
+          return false;
+      }
+    }
+
+    // Pre-auth flow
+    if (!user) {
+      switch (preAuthScreen) {
+        case 'landing':
+          return false; // let the OS handle it (exit app)
+        case 'accountType':
+          setPreAuthScreen('landing');
+          return true;
+        case 'partnerType':
+          setPreAuthScreen('accountType');
+          return true;
+        case 'phone':
+          if (isLoginMode) {
+            setPreAuthScreen('landing');
+          } else if (formData.accountType === 'partner') {
+            setPreAuthScreen('partnerType');
+          } else {
+            setPreAuthScreen('accountType');
+          }
+          return true;
+        case 'otp':
+          setPreAuthScreen('phone');
+          return true;
+        default:
+          return false;
+      }
+    }
+
+    return false;
+  }, [user, profile, activeTab, step, preAuthScreen, formData, isLoginMode, confirmDiscardAndSignOut, setStep]);
+
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const subscription = BackHandler.addEventListener('hardwareBackPress', handleHardwareBack);
+    return () => subscription.remove();
+  }, [handleHardwareBack]);
+
   // ───── Loading states ─────────────────────────────────────────────────────
 
   if (loading || (user && !isWizardLoaded) || isCheckingProfile) {
@@ -128,8 +237,11 @@ export const AppNavigator: React.FC = () => {
   }
 
   // ───── Error loading profile ───────────────────────────────────────────────
+  // Note: a null profile with no fetch error means the row simply doesn't exist yet
+  // (e.g. right after signup, before the DB trigger creates it) — that falls through
+  // to the wizard below rather than showing a hard error.
 
-  if (user && !profile) {
+  if (user && !profile && profileFetchError) {
     return (
       <SafeAreaView style={styles.loadingContainer}>
         <Text variant="body" color={theme.colors.danger} style={{ marginBottom: theme.spacing.md }}>
@@ -301,20 +413,15 @@ export const AppNavigator: React.FC = () => {
       };
 
       return (
-        <SafeAreaView style={styles.safe}>
-          <WizardNameScreen
-            formData={formData}
-            onUpdate={updateFormData}
-            onNext={handleCustomerFinish}
-            onBack={() => {
-              // For customers back from name goes back to landing (they haven't entered partner data)
-              signOut();
-            }}
-            currentStep={dotStep}
-            totalSteps={totalDots}
-            actionLabel={t('wizard.finish', { defaultValue: 'Finish' })}
-          />
-        </SafeAreaView>
+        <WizardNameScreen
+          formData={formData}
+          onUpdate={updateFormData}
+          onNext={handleCustomerFinish}
+          onBack={confirmDiscardAndSignOut}
+          currentStep={dotStep}
+          totalSteps={totalDots}
+          actionLabel={t('wizard.finish', { defaultValue: 'Finish' })}
+        />
       );
     }
 
@@ -478,105 +585,91 @@ export const AppNavigator: React.FC = () => {
     switch (step) {
       case PartnerStep.Name:
         return (
-          <SafeAreaView style={styles.safe}>
-            <WizardNameScreen
-              formData={formData}
-              onUpdate={updateFormData}
-              onNext={() => setStep(PartnerStep.Plate)}
-              onBack={() => signOut()}
-              currentStep={dotOffset + PartnerStep.Name}
-              totalSteps={PARTNER_TOTAL_STEPS}
-            />
-          </SafeAreaView>
+          <WizardNameScreen
+            formData={formData}
+            onUpdate={updateFormData}
+            onNext={() => setStep(PartnerStep.Plate)}
+            onBack={confirmDiscardAndSignOut}
+            currentStep={dotOffset + PartnerStep.Name}
+            totalSteps={PARTNER_TOTAL_STEPS}
+          />
         );
 
       case PartnerStep.Plate:
         return (
-          <SafeAreaView style={styles.safe}>
-            <WizardPlateScreen
-              formData={formData}
-              onUpdate={updateFormData}
-              onNext={() => setStep(PartnerStep.City)}
-              onBack={() => setStep(PartnerStep.Name)}
-              currentStep={dotOffset + PartnerStep.Plate}
-              totalSteps={PARTNER_TOTAL_STEPS}
-            />
-          </SafeAreaView>
+          <WizardPlateScreen
+            formData={formData}
+            onUpdate={updateFormData}
+            onNext={() => setStep(PartnerStep.City)}
+            onBack={() => setStep(PartnerStep.Name)}
+            currentStep={dotOffset + PartnerStep.Plate}
+            totalSteps={PARTNER_TOTAL_STEPS}
+          />
         );
 
       case PartnerStep.City:
         return (
-          <SafeAreaView style={styles.safe}>
-            <WizardCityScreen
-              formData={formData}
-              onUpdate={updateFormData}
-              onNext={() => setStep(PartnerStep.Photo)}
-              onBack={() => setStep(PartnerStep.Plate)}
-              currentStep={dotOffset + PartnerStep.City}
-              totalSteps={PARTNER_TOTAL_STEPS}
-            />
-          </SafeAreaView>
+          <WizardCityScreen
+            formData={formData}
+            onUpdate={updateFormData}
+            onNext={() => setStep(PartnerStep.Photo)}
+            onBack={() => setStep(PartnerStep.Plate)}
+            currentStep={dotOffset + PartnerStep.City}
+            totalSteps={PARTNER_TOTAL_STEPS}
+          />
         );
 
       case PartnerStep.Photo:
         return (
-          <SafeAreaView style={styles.safe}>
-            <WizardPhotoScreen
-              formData={formData}
-              onUpdate={updateFormData}
-              onNext={() => setStep(PartnerStep.Aadhaar)}
-              onBack={() => setStep(PartnerStep.City)}
-              currentStep={dotOffset + PartnerStep.Photo}
-              totalSteps={PARTNER_TOTAL_STEPS}
-            />
-          </SafeAreaView>
+          <WizardPhotoScreen
+            formData={formData}
+            onUpdate={updateFormData}
+            onNext={() => setStep(PartnerStep.Aadhaar)}
+            onBack={() => setStep(PartnerStep.City)}
+            currentStep={dotOffset + PartnerStep.Photo}
+            totalSteps={PARTNER_TOTAL_STEPS}
+          />
         );
 
       case PartnerStep.Aadhaar:
         return (
-          <SafeAreaView style={styles.safe}>
-            <WizardDocumentScreen
-              docType="aadhaar"
-              fieldKey="aadhaarUri"
-              formData={formData}
-              onUpdate={updateFormData}
-              onNext={() => setStep(PartnerStep.DrivingLicence)}
-              onBack={() => setStep(PartnerStep.Photo)}
-              currentStep={dotOffset + PartnerStep.Aadhaar}
-              totalSteps={PARTNER_TOTAL_STEPS}
-            />
-          </SafeAreaView>
+          <WizardDocumentScreen
+            docType="aadhaar"
+            fieldKey="aadhaarUri"
+            formData={formData}
+            onUpdate={updateFormData}
+            onNext={() => setStep(PartnerStep.DrivingLicence)}
+            onBack={() => setStep(PartnerStep.Photo)}
+            currentStep={dotOffset + PartnerStep.Aadhaar}
+            totalSteps={PARTNER_TOTAL_STEPS}
+          />
         );
 
       case PartnerStep.DrivingLicence:
         return (
-          <SafeAreaView style={styles.safe}>
-            <WizardDocumentScreen
-              docType="driving_licence"
-              fieldKey="drivingLicenceUri"
-              formData={formData}
-              onUpdate={updateFormData}
-              onNext={() => setStep(PartnerStep.Referral)}
-              onBack={() => setStep(PartnerStep.Aadhaar)}
-              currentStep={dotOffset + PartnerStep.DrivingLicence}
-              totalSteps={PARTNER_TOTAL_STEPS}
-            />
-          </SafeAreaView>
+          <WizardDocumentScreen
+            docType="driving_licence"
+            fieldKey="drivingLicenceUri"
+            formData={formData}
+            onUpdate={updateFormData}
+            onNext={() => setStep(PartnerStep.Referral)}
+            onBack={() => setStep(PartnerStep.Aadhaar)}
+            currentStep={dotOffset + PartnerStep.DrivingLicence}
+            totalSteps={PARTNER_TOTAL_STEPS}
+          />
         );
 
       case PartnerStep.Referral:
         return (
-          <SafeAreaView style={styles.safe}>
-            <WizardReferralScreen
-              userId={user.id}
-              formData={formData}
-              onUpdate={updateFormData}
-              onSubmit={handlePartnerSubmit}
-              onBack={() => setStep(PartnerStep.DrivingLicence)}
-              currentStep={dotOffset + PartnerStep.Referral}
-              totalSteps={PARTNER_TOTAL_STEPS}
-            />
-          </SafeAreaView>
+          <WizardReferralScreen
+            userId={user.id}
+            formData={formData}
+            onUpdate={updateFormData}
+            onSubmit={handlePartnerSubmit}
+            onBack={() => setStep(PartnerStep.DrivingLicence)}
+            currentStep={dotOffset + PartnerStep.Referral}
+            totalSteps={PARTNER_TOTAL_STEPS}
+          />
         );
 
       default:
@@ -679,10 +772,6 @@ export const AppNavigator: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',

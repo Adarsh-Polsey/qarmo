@@ -36,6 +36,8 @@ interface AuthContextType {
   profile: UserProfile | null;
   loading: boolean;
   isCheckingProfile: boolean;
+  /** True only when the last profile fetch failed (network/DB error) — not when the row simply doesn't exist yet. */
+  profileFetchError: boolean;
   signInWithPhone: (phone: string) => Promise<any>;
   verifyOTP: (
     phone: string,
@@ -53,19 +55,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [isCheckingProfile, setIsCheckingProfile] = useState(false);
+  const [profileFetchError, setProfileFetchError] = useState(false);
 
   const fetchProfile = async (userId: string): Promise<UserProfile | null> => {
     try {
       setIsCheckingProfile(true);
-      const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single();
+      // maybeSingle (not single): a brand-new signup may not have a profiles row yet
+      // (created by a DB trigger) — that's a normal null result, not a fetch error.
+      const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle();
 
       if (error) {
         console.warn('Profile fetch warning/error:', error.message);
+        setProfileFetchError(true);
         return null;
       }
-      return data as UserProfile;
+      setProfileFetchError(false);
+      return data as UserProfile | null;
     } catch (e) {
       console.error('Failed to fetch profile:', e);
+      setProfileFetchError(true);
       return null;
     } finally {
       setIsCheckingProfile(false);
@@ -168,6 +176,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         profile,
         loading,
         isCheckingProfile,
+        profileFetchError,
         signInWithPhone,
         verifyOTP,
         signOut,
