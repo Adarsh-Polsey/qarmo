@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 import { theme } from '@qarmo/ui';
 import { BOTPRESS_WEBCHAT_URL } from '../config/botpress';
@@ -8,7 +9,7 @@ export const AiAgentScreen: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView edges={['top']} style={styles.container}>
       <WebView
         source={{ uri: BOTPRESS_WEBCHAT_URL }}
         style={styles.webview}
@@ -24,7 +25,7 @@ export const AiAgentScreen: React.FC = () => {
           <ActivityIndicator size="large" color={theme.colors.primary} />
         </View>
       )}
-    </View>
+    </SafeAreaView>
   );
 };
 

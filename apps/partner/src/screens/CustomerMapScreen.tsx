@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { StyleSheet, View, Platform, TouchableOpacity, Linking, ActivityIndicator } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme, Text, IconMapPin, IconScooter, IconTaxi } from '@qarmo/ui';
 import { useTranslation } from '@qarmo/i18n';
 import {
@@ -113,12 +114,12 @@ export const CustomerMapScreen: React.FC = () => {
 
   if (!isReady) {
     return (
-      <View style={[styles.container, styles.loadingContainer]}>
+      <SafeAreaView edges={['top']} style={[styles.container, styles.loadingContainer]}>
         <ActivityIndicator size="large" color={theme.colors.primary} />
         <Text variant="caption" color={theme.colors.mutedText} style={styles.loadingText}>
           {t('map.locating', { defaultValue: 'Finding your location...' })}
         </Text>
-      </View>
+      </SafeAreaView>
     );
   }
 
@@ -131,9 +132,9 @@ export const CustomerMapScreen: React.FC = () => {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView edges={['top']} style={styles.container}>
       <GlobalCounter />
-      
+
       {locationDenied && (
         <View style={styles.banner}>
           <IconMapPin size={20} color={theme.colors.ink} style={{ marginRight: 8 }} />
@@ -175,7 +176,7 @@ export const CustomerMapScreen: React.FC = () => {
           </View>
         </View>
       )}
-    </View>
+    </SafeAreaView>
   );
 };
 
