@@ -394,9 +394,11 @@ export const AppNavigator: React.FC = () => {
           doneDoc('ok', { path: storagePath, bodySize });
           return storagePath;
         } catch (err: any) {
-          console.warn(`Doc upload warning for ${docType}:`, err.message);
+          // Aadhaar/licence are the required compliance documents (B-22/B-23) — unlike the
+          // best-effort avatar upload above, a failure here must stop Finish (B-25) rather
+          // than silently completing registration with a missing partner_documents row.
           doneDoc('fail', { message: err?.message });
-          return null;
+          throw new Error(t('wizard.errors.uploadFailed', { defaultValue: 'Upload failed. Try again.' }));
         }
       };
 

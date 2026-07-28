@@ -72,12 +72,16 @@ function AccountTabs<T extends string>({
 }) {
   const [width, setWidth] = useState(0);
   const anim = useRef(new Animated.Value(0)).current;
-  const index = Math.max(0, options.findIndex((o) => o.value === value));
+  const rawIndex = options.findIndex((o) => o.value === value);
+  // No option chosen yet (fresh signup) — neither label is active and the sliding
+  // underline stays hidden, so the choice reads as neutral rather than pre-picked.
+  const hasSelection = rawIndex !== -1;
+  const index = Math.max(0, rawIndex);
   const segW = width / options.length;
 
   useEffect(() => {
-    Animated.timing(anim, { toValue: index, ...SLIDE }).start();
-  }, [index, anim]);
+    if (hasSelection) Animated.timing(anim, { toValue: index, ...SLIDE }).start();
+  }, [index, hasSelection, anim]);
 
   const translateX = anim.interpolate({
     inputRange: options.map((_, i) => i),
@@ -108,7 +112,7 @@ function AccountTabs<T extends string>({
           </TouchableOpacity>
         );
       })}
-      {width > 0 && (
+      {width > 0 && hasSelection && (
         <Animated.View
           style={[styles.tabIndicator, { width: segW, transform: [{ translateX }] }]}
         />
@@ -230,6 +234,27 @@ export const OnboardingScreen: React.FC<Props> = ({
     !!drivingLicenceUri;
 
   const canFinish = customerReady || partnerReady;
+
+  // One-line reason shown above the disabled Finish button (Design Philosophy: never a
+  // silent no-op). Walks the same fields canFinish checks, in the order they appear on
+  // the form, so it always names the very next thing missing.
+  const finishReason = (() => {
+    if (canFinish) return null;
+    if (!accountType) {
+      return t('wizard.chooseAccountType', { defaultValue: 'Choose Customer or Partner to continue' });
+    }
+    if (isCustomer) {
+      return t('wizard.enterNameToContinue', { defaultValue: 'Enter your name to continue' });
+    }
+    if (!nameValid) return t('wizard.enterNameToContinue', { defaultValue: 'Enter your name to continue' });
+    if (!city) return t('wizard.selectCityToContinue', { defaultValue: 'Select a city to continue' });
+    if (!plateValid) return t('wizard.enterPlateToContinue', { defaultValue: 'Enter vehicle number to continue' });
+    if (!photoUri) return t('wizard.addPhotoToContinue', { defaultValue: 'Add a photo to continue' });
+    if (!aadhaarUri || !drivingLicenceUri) {
+      return t('wizard.addDocumentToContinue', { defaultValue: 'Add a document to continue' });
+    }
+    return null;
+  })();
 
   const handleFinish = async () => {
     if (submitting || !canFinish) return;
@@ -482,6 +507,11 @@ export const OnboardingScreen: React.FC<Props> = ({
 
         {/* Footer */}
         <View style={styles.footer}>
+          {finishReason && (
+            <Text variant="caption" color={theme.colors.mutedText} style={styles.finishReason}>
+              {finishReason}
+            </Text>
+          )}
           <Button
             label={finishLabel}
             variant="primary"
@@ -665,6 +695,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.background,
   },
   btn: { width: '100%' },
+  finishReason: { marginBottom: theme.spacing.xs, textAlign: 'center' },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
   modalContent: {
     backgroundColor: theme.colors.background,

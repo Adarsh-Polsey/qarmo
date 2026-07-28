@@ -89,6 +89,7 @@
     "uploadDocument": "Upload document",
     "uploadFailed": "Upload failed.",
     "tryAgain": "Try again",
+    "chooseAccountType": "Choose Customer or Partner to continue",
     "addPhotoToContinue": "Add a photo to continue",
     "addDocumentToContinue": "Add a document to continue",
     "enterNameToContinue": "Enter your name to continue",
