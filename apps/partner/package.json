@@ -3,17 +3,17 @@
   "version": "1.0.0",
   "main": "index.js",
   "dependencies": {
+    "@expo-google-fonts/manrope": "^0.4.2",
     "@qarmo/core": "workspace:*",
     "@qarmo/i18n": "workspace:*",
     "@qarmo/supabase": "workspace:*",
     "@qarmo/ui": "workspace:*",
-    "@expo-google-fonts/manrope": "^0.4.2",
     "@react-native-async-storage/async-storage": "^2.2.0",
     "base64-arraybuffer": "^1.0.2",
     "expo": "~54.0.36",
     "expo-device": "^8.0.10",
-    "expo-font": "~14.0.12",
     "expo-file-system": "~19.0.23",
+    "expo-font": "~14.0.12",
     "expo-image-manipulator": "~14.0.8",
     "expo-image-picker": "^17.0.11",
     "expo-location": "~19.0.8",
@@ -25,7 +25,8 @@
     "react-native": "0.81.5",
     "react-native-maps": "1.20.1",
     "react-native-safe-area-context": "^5.8.0",
-    "react-native-web": "^0.21.2"
+    "react-native-web": "^0.21.2",
+    "react-native-webview": "13.15.0"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0"

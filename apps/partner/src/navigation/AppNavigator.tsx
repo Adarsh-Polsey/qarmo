@@ -37,6 +37,7 @@ import { DashboardScreen } from '../screens/DashboardScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
 import { CustomerMapScreen } from '../screens/CustomerMapScreen';
 import { ComingSoonScreen } from '../screens/ComingSoonScreen';
+import { AiAgentScreen } from '../screens/AiAgentScreen';
 
 import { Ionicons } from '@expo/vector-icons';
 import { usePartnerLocation } from '../hooks/usePartnerLocation';
@@ -815,7 +816,7 @@ export const AppNavigator: React.FC = () => {
           : <DashboardScreen locationError={locationError} />;
       case 'tab2':
         return isCustomer
-          ? <ComingSoonScreen iconName="hardware-chip-outline" />
+          ? <AiAgentScreen />
           : <ComingSoonScreen iconName="list-outline" />;
       case 'profile':
         return <ProfileScreen />;
