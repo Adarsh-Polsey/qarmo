@@ -17,6 +17,7 @@ export const theme = {
     surface: '#F4F5F7', // Mist
     border: '#D9DCE1', // Line Grey
     mutedText: '#5F6570', // Grey
+    hint: '#9AA0AB', // Light Grey — softer than mutedText, for hint/placeholder text
     textOnColored: '#FFFFFF', // White text for use on amber/dark backgrounds
   },
   spacing: {

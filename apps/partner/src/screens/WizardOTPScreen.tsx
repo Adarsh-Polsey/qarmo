@@ -116,7 +116,7 @@ export const WizardOTPScreen: React.FC<Props> = ({
           <Text style={styles.heading}>
             {t('auth.otpTitle', { defaultValue: 'Enter verification code' })}
           </Text>
-          <Text variant="body" color={theme.colors.mutedText} style={styles.subtitle}>
+          <Text variant="body" color={theme.colors.hint} style={styles.subtitle}>
             {t('auth.otpSubtitle', { defaultValue: 'Enter the 6-digit code sent to' })}
           </Text>
           <View style={styles.phoneRow}>
@@ -209,11 +209,6 @@ export const WizardOTPScreen: React.FC<Props> = ({
             loading={loading}
             onPress={handleVerify}
             style={styles.btn}
-          />
-          <Button
-            label={t('common.cancel', { defaultValue: 'Cancel' })}
-            variant="ghost"
-            onPress={onBack}
           />
         </View>
       </KeyboardAvoidingView>

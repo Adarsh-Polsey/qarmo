@@ -35,28 +35,66 @@ const isValidPlate = (val: string) => {
   return /^[A-Z]{2}\d{2}[A-Z]{1,2}\d{4}$/.test(clean);
 };
 
-/** A single selectable card/pill used for account-type and partner-type choices */
-const SelectOption: React.FC<{
+/**
+ * Top-level account choice, styled as a light tab bar: an icon over a label with
+ * an ink underline marking the active tab (no boxes). Left-aligned, airy.
+ */
+const SegmentTab: React.FC<{
   icon: string;
   label: string;
   selected: boolean;
   onPress: () => void;
 }> = ({ icon, label, selected, onPress }) => (
-  <TouchableOpacity
-    style={[styles.option, selected && styles.optionSelected]}
-    onPress={onPress}
-    activeOpacity={0.85}
-  >
-    <Text style={styles.optionIcon}>{icon}</Text>
+  <TouchableOpacity style={styles.tab} onPress={onPress} activeOpacity={0.7}>
+    <Text style={styles.tabIcon}>{icon}</Text>
     <Text
       variant="caption"
       color={selected ? theme.colors.ink : theme.colors.mutedText}
-      style={styles.optionLabel}
+      style={styles.tabLabel}
     >
       {label}
     </Text>
+    <View style={[styles.tabUnderline, selected && styles.tabUnderlineActive]} />
   </TouchableOpacity>
 );
+
+/**
+ * Two-way choice, styled as a segmented pill: a grey track with the active
+ * option shown as a white pill outlined by a soft 1px border.
+ */
+function SegmentedPill<T extends string>({
+  options,
+  value,
+  onChange,
+}: {
+  options: { value: T; icon: string; label: string }[];
+  value: string;
+  onChange: (value: T) => void;
+}) {
+  return (
+    <View style={styles.segTrack}>
+      {options.map((opt) => {
+        const active = opt.value === value;
+        return (
+          <TouchableOpacity
+            key={opt.value}
+            style={[styles.segItem, active && styles.segItemActive]}
+            onPress={() => onChange(opt.value)}
+            activeOpacity={0.8}
+          >
+            <Text
+              variant="caption"
+              color={active ? theme.colors.ink : theme.colors.mutedText}
+              style={styles.segLabel}
+            >
+              {`${opt.icon}  ${opt.label}`}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+}
 
 /**
  * Single dynamic onboarding screen shown to new users after OTP. The visible
@@ -163,6 +201,22 @@ export const OnboardingScreen: React.FC<Props> = ({
 
   return (
     <SafeAreaView style={styles.safe}>
+      {/* iOS-style back — the only way out of onboarding (signs out) */}
+      <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.backBtn}
+          onPress={onExit}
+          disabled={submitting}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.backChevron}>‹</Text>
+          <Text variant="body" color={theme.colors.ink} style={styles.backLabel}>
+            {t('common.back', { defaultValue: 'Back' })}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
       <KeyboardAvoidingView
         style={styles.kav}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -180,15 +234,15 @@ export const OnboardingScreen: React.FC<Props> = ({
             {t('onboarding.subtitle', { defaultValue: 'Tell us how you’ll use Qarmo' })}
           </Text>
 
-          {/* Account type — inline, replaces the old standalone selection page */}
-          <View style={styles.optionRow}>
-            <SelectOption
+          {/* Account type — tab bar, replaces the old standalone selection page */}
+          <View style={styles.tabRow}>
+            <SegmentTab
               icon={t('accountType.customerIcon', { defaultValue: '🧍' })}
               label={t('accountType.customer', { defaultValue: 'Customer' })}
               selected={isCustomer}
               onPress={() => onUpdate({ accountType: 'customer', partnerType: '' })}
             />
-            <SelectOption
+            <SegmentTab
               icon={t('accountType.partnerIcon', { defaultValue: '🛺' })}
               label={t('accountType.partner', { defaultValue: 'Partner' })}
               selected={isPartner}
@@ -214,20 +268,22 @@ export const OnboardingScreen: React.FC<Props> = ({
           {/* Partner — ride/delivery choice + two grouped cards */}
           {isPartner && (
             <>
-              <View style={styles.optionRow}>
-                <SelectOption
-                  icon={t('partnerType.deliveryIcon', { defaultValue: '🛵' })}
-                  label={t('partnerType.delivery', { defaultValue: 'Delivery' })}
-                  selected={partnerType === 'delivery'}
-                  onPress={() => onUpdate({ partnerType: 'delivery' })}
-                />
-                <SelectOption
-                  icon={t('partnerType.rideIcon', { defaultValue: '🛺' })}
-                  label={t('partnerType.ride', { defaultValue: 'Ride' })}
-                  selected={partnerType === 'auto'}
-                  onPress={() => onUpdate({ partnerType: 'auto' })}
-                />
-              </View>
+              <SegmentedPill
+                value={partnerType}
+                onChange={(value) => onUpdate({ partnerType: value })}
+                options={[
+                  {
+                    value: 'delivery',
+                    icon: t('partnerType.deliveryIcon', { defaultValue: '🛵' }),
+                    label: t('partnerType.delivery', { defaultValue: 'Delivery' }),
+                  },
+                  {
+                    value: 'auto',
+                    icon: t('partnerType.rideIcon', { defaultValue: '🛺' }),
+                    label: t('partnerType.ride', { defaultValue: 'Ride' }),
+                  },
+                ]}
+              />
 
               {/* Card 1 — About you */}
               <View style={styles.card}>
@@ -345,12 +401,6 @@ export const OnboardingScreen: React.FC<Props> = ({
             onPress={handleFinish}
             style={styles.btn}
           />
-          <Button
-            label={t('common.cancel', { defaultValue: 'Cancel' })}
-            variant="ghost"
-            disabled={submitting}
-            onPress={onExit}
-          />
         </View>
       </KeyboardAvoidingView>
 
@@ -365,10 +415,8 @@ export const OnboardingScreen: React.FC<Props> = ({
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text variant="title">{t('wizard.selectCity', { defaultValue: 'Select your city' })}</Text>
-              <TouchableOpacity onPress={() => setCityModalVisible(false)}>
-                <Text variant="body" color={theme.colors.primary}>
-                  {t('common.cancel', { defaultValue: 'Cancel' })}
-                </Text>
+              <TouchableOpacity onPress={() => setCityModalVisible(false)} hitSlop={8}>
+                <Text style={styles.modalClose}>✕</Text>
               </TouchableOpacity>
             </View>
             <FlatList
@@ -397,56 +445,107 @@ export const OnboardingScreen: React.FC<Props> = ({
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: theme.colors.background },
   kav: { flex: 1 },
+  header: {
+    paddingHorizontal: theme.spacing.md,
+    paddingTop: theme.spacing.xs,
+    paddingBottom: theme.spacing.xs,
+  },
+  backBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    paddingVertical: theme.spacing.xs,
+  },
+  backChevron: {
+    fontFamily: theme.fonts.regular,
+    fontSize: 30,
+    lineHeight: 30,
+    color: theme.colors.ink,
+    marginRight: 2,
+    marginTop: -3,
+  },
+  backLabel: {
+    fontFamily: theme.fonts.medium,
+    fontWeight: '500',
+    fontSize: 17,
+  },
   scroll: { flex: 1 },
   scrollContent: {
     paddingHorizontal: theme.spacing.lg,
-    paddingTop: theme.spacing.lg,
+    paddingTop: theme.spacing.sm,
     paddingBottom: theme.spacing.lg,
   },
-  title: { marginBottom: theme.spacing.xs },
-  subtitle: { marginBottom: theme.spacing.lg },
-  optionRow: {
+  title: { fontSize: 22, marginBottom: theme.spacing.xs },
+  subtitle: { fontSize: 15, marginBottom: theme.spacing.lg },
+  // Account tabs (icon over label + active underline) — flat, no boxes
+  tabRow: {
     flexDirection: 'row',
-    gap: theme.spacing.md,
+    gap: theme.spacing.xl,
     marginBottom: theme.spacing.lg,
   },
-  option: {
-    flex: 1,
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radius.md,
-    borderWidth: 1.5,
-    borderColor: theme.colors.border,
-    paddingVertical: theme.spacing.lg,
+  tab: {
     alignItems: 'center',
-    gap: theme.spacing.sm,
-    minHeight: 96,
-    justifyContent: 'center',
   },
-  optionSelected: {
-    borderColor: theme.colors.primary,
-    backgroundColor: theme.colors.background,
+  tabIcon: {
+    fontSize: 26,
+    marginBottom: theme.spacing.xs,
   },
-  optionIcon: { fontSize: 32 },
-  optionLabel: {
+  tabLabel: {
     fontFamily: theme.fonts.medium,
     fontWeight: '500',
-    fontSize: 16,
+    fontSize: 15,
     textAlign: 'center',
+  },
+  tabUnderline: {
+    height: 2,
+    width: '100%',
+    borderRadius: 1,
+    marginTop: theme.spacing.sm,
+    backgroundColor: 'transparent',
+  },
+  tabUnderlineActive: {
+    backgroundColor: theme.colors.ink,
+  },
+  // Segmented pill (grey track, white active pill with soft border)
+  segTrack: {
+    flexDirection: 'row',
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.full,
+    padding: 4,
+    marginBottom: theme.spacing.lg,
+  },
+  segItem: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: theme.radius.full,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  segItemActive: {
+    backgroundColor: theme.colors.background,
+    borderColor: theme.colors.border,
+  },
+  segLabel: {
+    fontFamily: theme.fonts.medium,
+    fontWeight: '500',
+    fontSize: 15,
   },
   card: {
     backgroundColor: theme.colors.background,
     borderRadius: theme.radius.md,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    padding: theme.spacing.lg,
-    marginBottom: theme.spacing.lg,
+    padding: theme.spacing.md,
+    marginBottom: theme.spacing.md,
   },
   cardTitle: {
     fontFamily: theme.fonts.medium,
     fontWeight: '500',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
-    marginBottom: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
   },
   fieldLabel: {
     fontFamily: theme.fonts.medium,
@@ -455,7 +554,7 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing.sm,
   },
   picker: {
-    height: 56,
+    height: 48,
     borderWidth: 1,
     borderColor: theme.colors.border,
     borderRadius: theme.radius.sm,
@@ -467,8 +566,6 @@ const styles = StyleSheet.create({
   spacer: { height: theme.spacing.sm },
   formError: { marginTop: theme.spacing.sm, textAlign: 'center' },
   footer: {
-    gap: theme.spacing.sm,
-    alignItems: 'center',
     paddingHorizontal: theme.spacing.lg,
     paddingTop: theme.spacing.sm,
     paddingBottom: theme.spacing.md,
@@ -493,6 +590,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderColor: theme.colors.border,
   },
+  modalClose: { fontSize: 24, color: theme.colors.mutedText },
   cityItem: { paddingVertical: theme.spacing.md, paddingHorizontal: theme.spacing.lg },
   cityText: { fontSize: 18 },
   separator: { height: 1, backgroundColor: theme.colors.border },
