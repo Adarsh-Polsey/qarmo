@@ -7,7 +7,7 @@ import {
   Alert,
   Linking,
 } from 'react-native';
-import { theme, Text } from '@qarmo/ui';
+import { theme, Text, IconComponent, IconImage, IconCamera, IconCheck } from '@qarmo/ui';
 import { useTranslation } from '@qarmo/i18n';
 import * as ImagePicker from 'expo-image-picker';
 import { compressImage } from '../utils/image';
@@ -24,8 +24,8 @@ interface Props {
   shape?: 'circle' | 'rect';
   /** Crop aspect passed to the picker (e.g. [1, 1] for avatars) */
   aspect?: [number, number];
-  /** Emoji shown in the empty state */
-  placeholderIcon?: string;
+  /** Icon shown in the empty state */
+  placeholderIcon?: IconComponent;
 }
 
 /**
@@ -40,7 +40,7 @@ export const ImagePickerField: React.FC<Props> = ({
   onChange,
   shape = 'rect',
   aspect,
-  placeholderIcon = '🖼️',
+  placeholderIcon: PlaceholderIcon = IconImage,
 }) => {
   const { t } = useTranslation();
   const [error, setError] = useState<string | null>(null);
@@ -113,7 +113,7 @@ export const ImagePickerField: React.FC<Props> = ({
           {filled ? (
             <Image source={{ uri: value }} style={styles.tileImage} resizeMode="cover" />
           ) : (
-            <Text style={styles.placeholderIcon}>{placeholderIcon}</Text>
+            <PlaceholderIcon size={20} color={theme.colors.mutedText} />
           )}
         </View>
 
@@ -121,16 +121,19 @@ export const ImagePickerField: React.FC<Props> = ({
           <Text variant="caption" color={theme.colors.ink} style={styles.title} numberOfLines={1}>
             {label}
           </Text>
-          <Text
-            variant="caption"
-            color={filled ? theme.colors.success : theme.colors.mutedText}
-            style={styles.subtitle}
-            numberOfLines={1}
-          >
-            {filled
-              ? `✓  ${t('wizard.attached', { defaultValue: 'Attached' })}`
-              : hint || t('wizard.notAdded', { defaultValue: 'Not added yet' })}
-          </Text>
+          <View style={styles.subtitleRow}>
+            {filled && <IconCheck size={12} color={theme.colors.success} />}
+            <Text
+              variant="caption"
+              color={filled ? theme.colors.success : theme.colors.mutedText}
+              style={styles.subtitle}
+              numberOfLines={1}
+            >
+              {filled
+                ? t('wizard.attached', { defaultValue: 'Attached' })
+                : hint || t('wizard.notAdded', { defaultValue: 'Not added yet' })}
+            </Text>
+          </View>
         </View>
 
         <View style={styles.actions}>
@@ -141,7 +144,7 @@ export const ImagePickerField: React.FC<Props> = ({
             hitSlop={6}
             accessibilityLabel={t('wizard.takePhoto', { defaultValue: 'Take photo' })}
           >
-            <Text style={styles.iconGlyph}>📷</Text>
+            <IconCamera size={18} color={theme.colors.ink} />
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.iconBtn}
@@ -150,7 +153,7 @@ export const ImagePickerField: React.FC<Props> = ({
             hitSlop={6}
             accessibilityLabel={t('wizard.chooseGallery', { defaultValue: 'Gallery' })}
           >
-            <Text style={styles.iconGlyph}>🖼️</Text>
+            <IconImage size={18} color={theme.colors.ink} />
           </TouchableOpacity>
         </View>
       </View>
@@ -198,9 +201,6 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-  placeholderIcon: {
-    fontSize: 20,
-  },
   info: {
     flex: 1,
   },
@@ -210,10 +210,15 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 18,
   },
+  subtitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 1,
+  },
   subtitle: {
     fontSize: 12,
     lineHeight: 16,
-    marginTop: 1,
   },
   actions: {
     flexDirection: 'row',
@@ -228,9 +233,6 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.background,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  iconGlyph: {
-    fontSize: 18,
   },
   error: {
     marginTop: theme.spacing.xs,

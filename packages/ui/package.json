@@ -4,9 +4,13 @@
   "private": true,
   "main": "src/index.ts",
   "types": "src/index.ts",
+  "dependencies": {
+    "phosphor-react-native": "^3.0.6"
+  },
   "peerDependencies": {
     "react": "*",
-    "react-native": "*"
+    "react-native": "*",
+    "react-native-svg": "*"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

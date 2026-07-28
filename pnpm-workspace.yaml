@@ -40,3 +40,5 @@ minimumReleaseAgeExclude:
   - expo-modules-jsi@57.0.3
   - expo-server@57.0.1
   - expo@54.0.36 || 56.0.16 || 57.0.6
+patchedDependencies:
+  phosphor-react-native@3.0.6: patches/phosphor-react-native@3.0.6.patch

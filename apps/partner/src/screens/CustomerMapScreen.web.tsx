@@ -1,9 +1,8 @@
 import React, { useEffect, useRef } from 'react';
 import { StyleSheet, View, Animated } from 'react-native';
-import { theme, Text, Card } from '@qarmo/ui';
+import { theme, Text, Card, IconMapPin } from '@qarmo/ui';
 import { useTranslation } from '@qarmo/i18n';
 import { GlobalCounter } from '../components/GlobalCounter';
-import { Ionicons } from '@expo/vector-icons';
 
 export const CustomerMapScreen: React.FC = () => {
   const { t } = useTranslation();
@@ -34,7 +33,7 @@ export const CustomerMapScreen: React.FC = () => {
         <Card style={styles.card} shadow="lg">
           <Animated.View style={[styles.iconWrapper, { transform: [{ scale: pulseAnim }] }]}>
             <View style={styles.iconBackground}>
-              <Ionicons name="location" size={48} color={theme.colors.primary} />
+              <IconMapPin size={48} color={theme.colors.primary} />
             </View>
           </Animated.View>
           

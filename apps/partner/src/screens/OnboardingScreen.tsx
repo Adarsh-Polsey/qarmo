@@ -13,7 +13,19 @@ import {
   LayoutChangeEvent,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { theme, Text, Button, Input } from '@qarmo/ui';
+import {
+  theme,
+  Text,
+  Button,
+  Input,
+  IconComponent,
+  IconTaxi,
+  IconScooter,
+  IconCaretLeft,
+  IconX,
+  IconCamera,
+  IconIdentificationCard,
+} from '@qarmo/ui';
 import { useTranslation } from '@qarmo/i18n';
 import { CITIES } from '@qarmo/core';
 import { supabase } from '@qarmo/supabase';
@@ -114,7 +126,7 @@ function SegmentedPill<T extends string>({
   value,
   onChange,
 }: {
-  options: { value: T; icon: string; label: string }[];
+  options: { value: T; icon: IconComponent; label: string }[];
   value: string;
   onChange: (value: T) => void;
 }) {
@@ -144,6 +156,7 @@ function SegmentedPill<T extends string>({
       )}
       {options.map((opt) => {
         const active = opt.value === value;
+        const OptIcon = opt.icon;
         return (
           <TouchableOpacity
             key={opt.value}
@@ -151,12 +164,13 @@ function SegmentedPill<T extends string>({
             onPress={() => onChange(opt.value)}
             activeOpacity={0.8}
           >
+            <OptIcon size={16} color={active ? theme.colors.ink : theme.colors.mutedText} />
             <Text
               variant="caption"
               color={active ? theme.colors.ink : theme.colors.mutedText}
               style={styles.segLabel}
             >
-              {`${opt.icon}  ${opt.label}`}
+              {opt.label}
             </Text>
           </TouchableOpacity>
         );
@@ -279,7 +293,7 @@ export const OnboardingScreen: React.FC<Props> = ({
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           activeOpacity={0.7}
         >
-          <Text style={styles.backChevron}>‹</Text>
+          <IconCaretLeft size={20} color={theme.colors.ink} style={styles.backChevron} />
           <Text variant="body" color={theme.colors.ink} style={styles.backLabel}>
             {t('common.back', { defaultValue: 'Back' })}
           </Text>
@@ -342,12 +356,12 @@ export const OnboardingScreen: React.FC<Props> = ({
                 options={[
                   {
                     value: 'auto',
-                    icon: t('partnerType.rideIcon', { defaultValue: '🛺' }),
+                    icon: IconTaxi,
                     label: t('partnerType.ride', { defaultValue: 'Ride' }),
                   },
                   {
                     value: 'delivery',
-                    icon: t('partnerType.deliveryIcon', { defaultValue: '🛵' }),
+                    icon: IconScooter,
                     label: t('partnerType.delivery', { defaultValue: 'Delivery' }),
                   },
                 ]}
@@ -416,7 +430,7 @@ export const OnboardingScreen: React.FC<Props> = ({
                   onChange={(uri) => onUpdate({ photoUri: uri })}
                   shape="circle"
                   aspect={[1, 1]}
-                  placeholderIcon="📷"
+                  placeholderIcon={IconCamera}
                 />
 
                 <ImagePickerField
@@ -424,7 +438,7 @@ export const OnboardingScreen: React.FC<Props> = ({
                   hint={t('wizard.aadhaarHint', { defaultValue: 'Upload your Aadhaar card' })}
                   value={aadhaarUri}
                   onChange={(uri) => onUpdate({ aadhaarUri: uri })}
-                  placeholderIcon="🪪"
+                  placeholderIcon={IconIdentificationCard}
                 />
 
                 <ImagePickerField
@@ -432,7 +446,7 @@ export const OnboardingScreen: React.FC<Props> = ({
                   hint={t('wizard.drivingLicenceHint', { defaultValue: 'Upload your driving licence' })}
                   value={drivingLicenceUri}
                   onChange={(uri) => onUpdate({ drivingLicenceUri: uri })}
-                  placeholderIcon="🪪"
+                  placeholderIcon={IconIdentificationCard}
                 />
 
                 <Text variant="caption" color={theme.colors.ink} style={styles.fieldLabel}>
@@ -491,7 +505,7 @@ export const OnboardingScreen: React.FC<Props> = ({
             <View style={styles.modalHeader}>
               <Text variant="title">{t('wizard.selectCity', { defaultValue: 'Select your city' })}</Text>
               <TouchableOpacity onPress={() => setCityModalVisible(false)} hitSlop={8}>
-                <Text style={styles.modalClose}>✕</Text>
+                <IconX size={24} color={theme.colors.mutedText} />
               </TouchableOpacity>
             </View>
             <FlatList
@@ -532,12 +546,7 @@ const styles = StyleSheet.create({
     paddingVertical: theme.spacing.xs,
   },
   backChevron: {
-    fontFamily: theme.fonts.regular,
-    fontSize: 30,
-    lineHeight: 30,
-    color: theme.colors.ink,
     marginRight: 2,
-    marginTop: -3,
   },
   backLabel: {
     fontFamily: theme.fonts.medium,
@@ -598,6 +607,8 @@ const styles = StyleSheet.create({
   },
   segItem: {
     flex: 1,
+    flexDirection: 'row',
+    gap: 6,
     paddingVertical: 9,
     alignItems: 'center',
     justifyContent: 'center',
@@ -670,7 +681,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderColor: theme.colors.border,
   },
-  modalClose: { fontSize: 24, color: theme.colors.mutedText },
   cityItem: { paddingVertical: theme.spacing.md, paddingHorizontal: theme.spacing.lg },
   cityText: { fontSize: 18 },
   separator: { height: 1, backgroundColor: theme.colors.border },

@@ -9,7 +9,7 @@ import {
   Share,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { theme, Text, Card, getInitials } from '@qarmo/ui';
+import { theme, Text, Card, getInitials, IconTaxi, IconScooter, IconStar, IconShareNetwork } from '@qarmo/ui';
 import { useTranslation } from '@qarmo/i18n';
 import { supabase } from '@qarmo/supabase';
 import { useAuth } from '../hooks/useAuth';
@@ -29,9 +29,10 @@ export const DashboardScreen: React.FC<Props> = ({
 
   const referralCode = profile?.referral_code || '';
   const firstName = profile?.full_name?.split(' ')[0] || 'Partner';
-  const partnerTypeLabel = profile?.partner_type === 'ride' 
-    ? t('partner.ridePartner', { defaultValue: '🛺 Ride Partner' }) 
-    : t('partner.deliveryPartner', { defaultValue: '🛵 Delivery Partner' });
+  const partnerTypeLabel = profile?.partner_type === 'ride'
+    ? t('partner.ridePartner', { defaultValue: 'Ride Partner' })
+    : t('partner.deliveryPartner', { defaultValue: 'Delivery Partner' });
+  const PartnerTypeIcon = profile?.partner_type === 'ride' ? IconTaxi : IconScooter;
 
   useEffect(() => {
     if (!profile) return;
@@ -120,7 +121,10 @@ export const DashboardScreen: React.FC<Props> = ({
             </View>
             <View style={styles.idDetails}>
               <Text variant="title" style={styles.idName}>{profile.full_name || firstName}</Text>
-              <Text variant="body" color={theme.colors.mutedText}>{partnerTypeLabel}</Text>
+              <View style={styles.partnerTypeRow}>
+                <PartnerTypeIcon size={16} color={theme.colors.mutedText} />
+                <Text variant="body" color={theme.colors.mutedText}>{partnerTypeLabel}</Text>
+              </View>
               <Text variant="caption" color={theme.colors.mutedText}>
                 {profile.city || t('dashboard.unknownCity', { defaultValue: 'Unknown City' })} {plateNumber ? `· ${plateNumber}` : ''}
               </Text>
@@ -128,9 +132,12 @@ export const DashboardScreen: React.FC<Props> = ({
           </View>
 
           <View style={styles.idStats}>
-            <Text variant="heroNumber" style={styles.pointsText}>
-              ⭐ {points} points
-            </Text>
+            <View style={styles.pointsRow}>
+              <IconStar size={28} color="#1B7A3D" />
+              <Text variant="heroNumber" style={styles.pointsText}>
+                {points} points
+              </Text>
+            </View>
             <Text variant="body" color={theme.colors.mutedText} style={styles.referredText}>
               {referredCount === 0
                 ? t('dashboard.inviteNudge', { defaultValue: 'Invite a friend to earn points!' })
@@ -145,8 +152,9 @@ export const DashboardScreen: React.FC<Props> = ({
         </Card>
 
         <TouchableOpacity style={styles.shareBtn} onPress={handleShare} activeOpacity={0.8}>
+          <IconShareNetwork size={18} color={theme.colors.ink} />
           <Text variant="body" style={styles.shareBtnText}>
-            🔗 {t('dashboard.shareCode', { defaultValue: 'Share my code' })}
+            {t('dashboard.shareCode', { defaultValue: 'Share my code' })}
           </Text>
         </TouchableOpacity>
       </ScrollView>
@@ -219,8 +227,18 @@ const styles = StyleSheet.create({
   idName: {
     marginBottom: 4,
   },
+  partnerTypeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
   idStats: {
     gap: theme.spacing.sm,
+  },
+  pointsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.xs,
   },
   pointsText: {
     color: '#1B7A3D', // Kerala Green
@@ -240,6 +258,8 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing.xs,
   },
   shareBtn: {
+    flexDirection: 'row',
+    gap: theme.spacing.xs,
     backgroundColor: '#FFC107', // Amber element
     paddingVertical: theme.spacing.md,
     borderRadius: theme.radius.md,

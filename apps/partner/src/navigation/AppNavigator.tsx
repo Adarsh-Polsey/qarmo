@@ -9,7 +9,7 @@ import {
   BackHandler,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { theme, Text, Button } from '@qarmo/ui';
+import { theme, Text, Button, IconHouse, IconMapTrifold, IconList, IconCpu, IconUser } from '@qarmo/ui';
 import { useTranslation } from '@qarmo/i18n';
 import { useAuth } from '../hooks/useAuth';
 import { useWizard } from '../hooks/useWizard';
@@ -32,7 +32,6 @@ import { CustomerMapScreen } from '../screens/CustomerMapScreen';
 import { ComingSoonScreen } from '../screens/ComingSoonScreen';
 import { AiAgentScreen } from '../screens/AiAgentScreen';
 
-import { Ionicons } from '@expo/vector-icons';
 import { usePartnerLocation } from '../hooks/usePartnerLocation';
 import { compressImage, uriToUploadBody } from '../utils/image';
 import { logger } from '../utils/logger';
@@ -558,7 +557,7 @@ export const AppNavigator: React.FC = () => {
       case 'tab2':
         return isCustomer
           ? <AiAgentScreen />
-          : <ComingSoonScreen iconName="list-outline" />;
+          : <ComingSoonScreen icon={IconList} />;
       case 'profile':
         return <ProfileScreen />;
       default:
@@ -573,13 +572,11 @@ export const AppNavigator: React.FC = () => {
       <View style={styles.tabContent}>{renderTabContent()}</View>
       <View style={styles.tabBar}>
         <TouchableOpacity style={styles.tabItem} onPress={() => setActiveTab('home')} activeOpacity={0.8}>
-          <Ionicons
-            name={isCustomer
-              ? (activeTab === 'home' ? 'map' : 'map-outline')
-              : (activeTab === 'home' ? 'home' : 'home-outline')}
-            size={24}
-            color={activeTab === 'home' ? theme.colors.primary : theme.colors.mutedText}
-          />
+          {isCustomer ? (
+            <IconMapTrifold size={24} color={activeTab === 'home' ? theme.colors.primary : theme.colors.mutedText} />
+          ) : (
+            <IconHouse size={24} color={activeTab === 'home' ? theme.colors.primary : theme.colors.mutedText} />
+          )}
           <Text
             variant="caption"
             color={activeTab === 'home' ? theme.colors.primary : theme.colors.mutedText}
@@ -590,13 +587,11 @@ export const AppNavigator: React.FC = () => {
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.tabItem} onPress={() => setActiveTab('tab2')} activeOpacity={0.8}>
-          <Ionicons
-            name={isCustomer
-              ? (activeTab === 'tab2' ? 'hardware-chip' : 'hardware-chip-outline')
-              : (activeTab === 'tab2' ? 'list' : 'list-outline')}
-            size={24}
-            color={activeTab === 'tab2' ? theme.colors.primary : theme.colors.mutedText}
-          />
+          {isCustomer ? (
+            <IconCpu size={24} color={activeTab === 'tab2' ? theme.colors.primary : theme.colors.mutedText} />
+          ) : (
+            <IconList size={24} color={activeTab === 'tab2' ? theme.colors.primary : theme.colors.mutedText} />
+          )}
           <Text
             variant="caption"
             color={activeTab === 'tab2' ? theme.colors.primary : theme.colors.mutedText}
@@ -609,11 +604,7 @@ export const AppNavigator: React.FC = () => {
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.tabItem} onPress={() => setActiveTab('profile')} activeOpacity={0.8}>
-          <Ionicons
-            name={activeTab === 'profile' ? 'person' : 'person-outline'}
-            size={24}
-            color={activeTab === 'profile' ? theme.colors.primary : theme.colors.mutedText}
-          />
+          <IconUser size={24} color={activeTab === 'profile' ? theme.colors.primary : theme.colors.mutedText} />
           <Text
             variant="caption"
             color={activeTab === 'profile' ? theme.colors.primary : theme.colors.mutedText}

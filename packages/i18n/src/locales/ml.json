@@ -31,22 +31,18 @@
     "rides": "യാത്രകൾ",
     "earnings": "വരുമാനം",
     "referrals": "റഫറലുകൾ",
-    "ridePartner": "🛺 റൈഡ് പാർട്ണർ",
-    "deliveryPartner": "🛵 ഡെലിവറി പാർട്ണർ"
+    "ridePartner": "റൈഡ് പാർട്ണർ",
+    "deliveryPartner": "ഡെലിവറി പാർട്ണർ"
   },
   "accountType": {
     "title": "ഖർമോ എങ്ങനെ ഉപയോഗിക്കും?",
     "customer": "കസ്റ്റമർ",
-    "partner": "പാർട്ണർ",
-    "customerIcon": "🧍",
-    "partnerIcon": "🛺"
+    "partner": "പാർട്ണർ"
   },
   "partnerType": {
     "title": "നിങ്ങൾ എന്ത് ചെയ്യുന്നു?",
     "delivery": "ഡെലിവറി പാർട്ണർ",
-    "ride": "റൈഡ് പാർട്ണർ",
-    "deliveryIcon": "🛵",
-    "rideIcon": "🛺"
+    "ride": "റൈഡ് പാർട്ണർ"
   },
   "wizard": {
     "nameAndPhoto": "നിങ്ങളുടെ വിവരങ്ങൾ",

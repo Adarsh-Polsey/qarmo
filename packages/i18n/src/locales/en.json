@@ -31,22 +31,18 @@
     "rides": "Rides",
     "earnings": "Earnings",
     "referrals": "Referrals",
-    "ridePartner": "🛺 Ride Partner",
-    "deliveryPartner": "🛵 Delivery Partner"
+    "ridePartner": "Ride Partner",
+    "deliveryPartner": "Delivery Partner"
   },
   "accountType": {
     "title": "How will you use Qarmo?",
     "customer": "Customer",
-    "partner": "Partner",
-    "customerIcon": "🧍",
-    "partnerIcon": "🛺"
+    "partner": "Partner"
   },
   "partnerType": {
     "title": "What do you do?",
     "delivery": "Delivery Partner",
-    "ride": "Ride Partner",
-    "deliveryIcon": "🛵",
-    "rideIcon": "🛺"
+    "ride": "Ride Partner"
   },
   "wizard": {
     "nameAndPhoto": "Your Details",

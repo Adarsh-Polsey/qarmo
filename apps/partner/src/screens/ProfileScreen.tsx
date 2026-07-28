@@ -12,7 +12,26 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { theme, Text, Button, Card, getInitials } from '@qarmo/ui';
+import {
+  theme,
+  Text,
+  Button,
+  Card,
+  getInitials,
+  IconCamera,
+  IconPencilSimple,
+  IconPhone,
+  IconUser,
+  IconTaxi,
+  IconScooter,
+  IconMapPin,
+  IconCar,
+  IconGift,
+  IconSignOut,
+  IconIdentificationCard,
+  IconCheck,
+  IconCaretRight,
+} from '@qarmo/ui';
 import { useTranslation } from '@qarmo/i18n';
 import { supabase } from '@qarmo/supabase';
 import { useAuth } from '../hooks/useAuth';
@@ -249,10 +268,13 @@ export const ProfileScreen: React.FC = () => {
 
   const partnerTypeLabel =
     profile.partner_type === 'ride'
-      ? t('partner.ridePartner', { defaultValue: '🛺 Ride Partner' })
+      ? t('partner.ridePartner', { defaultValue: 'Ride Partner' })
       : profile.partner_type === 'delivery'
-      ? t('partner.deliveryPartner', { defaultValue: '🛵 Delivery Partner' })
+      ? t('partner.deliveryPartner', { defaultValue: 'Delivery Partner' })
       : t('profile.partner', { defaultValue: 'Partner' });
+
+  const PartnerTypeIcon =
+    profile.partner_type === 'ride' ? IconTaxi : profile.partner_type === 'delivery' ? IconScooter : IconUser;
 
   const memberDate = profile.created_at
     ? new Date(profile.created_at).toLocaleDateString(undefined, {
@@ -296,7 +318,7 @@ export const ProfileScreen: React.FC = () => {
               )}
             </View>
             <View style={styles.cameraBadge}>
-              <Text style={styles.cameraIcon}>📷</Text>
+              <IconCamera size={14} color={theme.colors.textOnColored} />
             </View>
           </TouchableOpacity>
 
@@ -305,23 +327,32 @@ export const ProfileScreen: React.FC = () => {
               <Text variant="title" style={styles.nameText}>
                 {profile.full_name || 'User'}
               </Text>
-              <Text style={styles.editNameIcon}>✏️</Text>
+              <IconPencilSimple size={14} color={theme.colors.mutedText} />
             </TouchableOpacity>
 
-            <Text variant="body" color={theme.colors.mutedText} style={styles.phoneText}>
-              📱 {profile.phone}
-            </Text>
-
-            <TouchableOpacity onPress={showAvatarPickerOptions} activeOpacity={0.7}>
-              <Text variant="caption" color={theme.colors.primaryPressed} style={styles.changePhotoText}>
-                {t('wizard.retake', { defaultValue: 'Change Photo' })} →
+            <View style={styles.phoneRow}>
+              <IconPhone size={14} color={theme.colors.mutedText} />
+              <Text variant="body" color={theme.colors.mutedText} style={styles.phoneText}>
+                {profile.phone}
               </Text>
+            </View>
+
+            <TouchableOpacity onPress={showAvatarPickerOptions} activeOpacity={0.7} style={styles.changePhotoTouch}>
+              <Text variant="caption" color={theme.colors.primaryPressed} style={styles.changePhotoText}>
+                {t('wizard.retake', { defaultValue: 'Change Photo' })}
+              </Text>
+              <IconCaretRight size={12} color={theme.colors.primaryPressed} />
             </TouchableOpacity>
 
             <View style={styles.badgeRow}>
               <View style={styles.badge}>
+                {isCustomer ? (
+                  <IconUser size={13} color={theme.colors.ink} />
+                ) : (
+                  <PartnerTypeIcon size={13} color={theme.colors.ink} />
+                )}
                 <Text variant="caption" style={styles.badgeText}>
-                  {isCustomer ? '🧍 Customer' : partnerTypeLabel}
+                  {isCustomer ? t('profile.customer', { defaultValue: 'Customer' }) : partnerTypeLabel}
                 </Text>
               </View>
             </View>
@@ -342,7 +373,7 @@ export const ProfileScreen: React.FC = () => {
               <Text variant="body" style={styles.detailValue}>
                 {profile.full_name || '—'}
               </Text>
-              <Text style={styles.smallEditIcon}> ✏️</Text>
+              <IconPencilSimple size={12} color={theme.colors.mutedText} style={styles.smallEditIcon} />
             </TouchableOpacity>
           </View>
 
@@ -376,9 +407,12 @@ export const ProfileScreen: React.FC = () => {
                 <Text variant="caption" color={theme.colors.mutedText} style={styles.detailLabel}>
                   {t('profile.partnerTypeLabel', { defaultValue: 'Partner Role' })}
                 </Text>
-                <Text variant="body" style={styles.detailValue}>
-                  {partnerTypeLabel}
-                </Text>
+                <View style={styles.detailValueRow}>
+                  <PartnerTypeIcon size={15} color={theme.colors.ink} />
+                  <Text variant="body" style={styles.detailValue}>
+                    {partnerTypeLabel}
+                  </Text>
+                </View>
               </View>
 
               {profile.city && (
@@ -388,9 +422,12 @@ export const ProfileScreen: React.FC = () => {
                     <Text variant="caption" color={theme.colors.mutedText} style={styles.detailLabel}>
                       {t('profile.operatingCityLabel', { defaultValue: 'Operating City' })}
                     </Text>
-                    <Text variant="body" style={styles.detailValue}>
-                      📍 {profile.city}
-                    </Text>
+                    <View style={styles.detailValueRow}>
+                      <IconMapPin size={15} color={theme.colors.ink} />
+                      <Text variant="body" style={styles.detailValue}>
+                        {profile.city}
+                      </Text>
+                    </View>
                   </View>
                 </>
               )}
@@ -402,9 +439,12 @@ export const ProfileScreen: React.FC = () => {
                     <Text variant="caption" color={theme.colors.mutedText} style={styles.detailLabel}>
                       {t('profile.vehiclePlateLabel', { defaultValue: 'Vehicle Number' })}
                     </Text>
-                    <Text variant="body" style={styles.detailValue}>
-                      🚗 {plateNumber}
-                    </Text>
+                    <View style={styles.detailValueRow}>
+                      <IconCar size={15} color={theme.colors.ink} />
+                      <Text variant="body" style={styles.detailValue}>
+                        {plateNumber}
+                      </Text>
+                    </View>
                   </View>
                 </>
               ) : null}
@@ -419,8 +459,9 @@ export const ProfileScreen: React.FC = () => {
                   {t('profile.referralCodeLabel', { defaultValue: 'Referral Code' })}
                 </Text>
                 <TouchableOpacity onPress={handleShareReferral} style={styles.referralTouch}>
+                  <IconGift size={15} color={theme.colors.primaryPressed} />
                   <Text variant="body" style={styles.referralCodeVal}>
-                    🎁 {profile.referral_code}
+                    {profile.referral_code}
                   </Text>
                   <Text variant="caption" color={theme.colors.primary} style={styles.shareText}>
                     Share
@@ -440,14 +481,15 @@ export const ProfileScreen: React.FC = () => {
 
             <View style={styles.docRow}>
               <View style={styles.docInfo}>
-                <Text style={styles.docIcon}>🪪</Text>
+                <IconIdentificationCard size={20} color={theme.colors.mutedText} />
                 <Text variant="body" style={styles.docTitle}>
                   {t('profile.aadhaarDoc', { defaultValue: 'Aadhaar Card' })}
                 </Text>
               </View>
               <View style={[styles.docBadge, hasAadhaar ? styles.docBadgeUploaded : styles.docBadgePending]}>
+                {hasAadhaar && <IconCheck size={12} color={theme.colors.success} style={styles.docCheckIcon} />}
                 <Text variant="caption" style={hasAadhaar ? styles.docTextUploaded : styles.docTextPending}>
-                  {hasAadhaar ? `✓ ${t('profile.docUploaded', { defaultValue: 'Uploaded & stored' })}` : t('common.notSelected', { defaultValue: 'Not Uploaded' })}
+                  {hasAadhaar ? t('profile.docUploaded', { defaultValue: 'Uploaded & stored' }) : t('common.notSelected', { defaultValue: 'Not Uploaded' })}
                 </Text>
               </View>
             </View>
@@ -456,14 +498,15 @@ export const ProfileScreen: React.FC = () => {
 
             <View style={styles.docRow}>
               <View style={styles.docInfo}>
-                <Text style={styles.docIcon}>🪪</Text>
+                <IconIdentificationCard size={20} color={theme.colors.mutedText} />
                 <Text variant="body" style={styles.docTitle}>
                   {t('profile.licenceDoc', { defaultValue: 'Driving Licence' })}
                 </Text>
               </View>
               <View style={[styles.docBadge, hasLicence ? styles.docBadgeUploaded : styles.docBadgePending]}>
+                {hasLicence && <IconCheck size={12} color={theme.colors.success} style={styles.docCheckIcon} />}
                 <Text variant="caption" style={hasLicence ? styles.docTextUploaded : styles.docTextPending}>
-                  {hasLicence ? `✓ ${t('profile.docUploaded', { defaultValue: 'Uploaded & stored' })}` : t('common.notSelected', { defaultValue: 'Not Uploaded' })}
+                  {hasLicence ? t('profile.docUploaded', { defaultValue: 'Uploaded & stored' }) : t('common.notSelected', { defaultValue: 'Not Uploaded' })}
                 </Text>
               </View>
             </View>
@@ -503,8 +546,9 @@ export const ProfileScreen: React.FC = () => {
         {/* Log Out Action */}
         <View style={styles.actionsContainer}>
           <Button
-            label={t('auth.logout', { defaultValue: '🚪 Log out' })}
+            label={t('auth.logout', { defaultValue: 'Log out' })}
             variant="secondary"
+            icon={IconSignOut}
             onPress={handleLogout}
             style={styles.logoutBtn}
           />
@@ -588,9 +632,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  cameraIcon: {
-    fontSize: 12,
-  },
   headerDetails: {
     flex: 1,
     gap: 4,
@@ -605,31 +646,41 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: '500',
   },
-  editNameIcon: {
-    fontSize: 14,
-  },
   nameValTouch: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   smallEditIcon: {
-    fontSize: 12,
+    marginLeft: 4,
+  },
+  phoneRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   phoneText: {
     fontSize: 15,
+  },
+  changePhotoTouch: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    marginTop: 2,
   },
   changePhotoText: {
     fontFamily: theme.fonts.medium,
     fontWeight: '500',
     fontSize: 13,
     textDecorationLine: 'underline',
-    marginTop: 2,
   },
   badgeRow: {
     flexDirection: 'row',
     marginTop: 4,
   },
   badge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radius.sm,
     paddingHorizontal: theme.spacing.sm,
@@ -671,6 +722,11 @@ const styles = StyleSheet.create({
     fontSize: 15,
     textAlign: 'right',
   },
+  detailValueRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
   divider: {
     height: 1,
     backgroundColor: theme.colors.border,
@@ -702,18 +758,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: theme.spacing.sm,
   },
-  docIcon: {
-    fontSize: 20,
-  },
   docTitle: {
     fontFamily: theme.fonts.medium,
     fontWeight: '500',
     fontSize: 16,
   },
   docBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
     borderRadius: theme.radius.sm,
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: 4,
+  },
+  docCheckIcon: {
+    marginRight: 4,
   },
   docBadgeUploaded: {
     backgroundColor: '#E8F5E9',

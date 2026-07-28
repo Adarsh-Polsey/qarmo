@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, StyleSheet } from 'react-native';
-import { Text, theme } from '@qarmo/ui';
+import { Text, theme, IconConfetti } from '@qarmo/ui';
 import { supabase } from '@qarmo/supabase';
 import { useTranslation } from '@qarmo/i18n';
 
@@ -74,8 +74,9 @@ export const GlobalCounter: React.FC = () => {
 
   return (
     <View style={styles.container}>
+      <IconConfetti size={16} color={theme.colors.ink} />
       <Text variant="body" style={styles.text}>
-        🎉 {text}
+        {text}
       </Text>
     </View>
   );
@@ -83,6 +84,8 @@ export const GlobalCounter: React.FC = () => {
 
 const styles = StyleSheet.create({
   container: {
+    flexDirection: 'row',
+    gap: theme.spacing.xs,
     backgroundColor: theme.colors.surface,
     paddingVertical: theme.spacing.md,
     paddingHorizontal: theme.spacing.lg,

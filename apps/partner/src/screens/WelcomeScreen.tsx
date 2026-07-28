@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { theme, Text, Button } from '@qarmo/ui';
+import { theme, Text, Button, IconTaxi } from '@qarmo/ui';
 import { useTranslation } from '@qarmo/i18n';
 
 interface Props {
@@ -22,7 +22,7 @@ export const WelcomeScreen: React.FC<Props> = ({ onContinue }) => {
         <View style={styles.hero}>
           {/* Image placeholder — swap for real artwork/illustration later */}
           <View style={styles.imagePlaceholder}>
-            <Text style={styles.placeholderEmoji}>🛺</Text>
+            <IconTaxi size={88} color={theme.colors.mutedText} />
             <Text variant="caption" color={theme.colors.mutedText} style={styles.placeholderCaption}>
               {t('welcome.imagePlaceholder', { defaultValue: 'Image' })}
             </Text>
@@ -80,9 +80,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: theme.spacing.sm,
     marginBottom: theme.spacing.lg,
-  },
-  placeholderEmoji: {
-    fontSize: 88,
   },
   placeholderCaption: {
     letterSpacing: 1,

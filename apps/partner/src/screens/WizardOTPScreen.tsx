@@ -247,7 +247,7 @@ const styles = StyleSheet.create({
   otpCell: {
     flex: 1,
     aspectRatio: 1,
-    maxHeight: 64,
+    maxHeight: 52,
     borderWidth: 1,
     borderColor: theme.colors.border,
     borderRadius: theme.radius.md,
@@ -265,14 +265,14 @@ const styles = StyleSheet.create({
   },
   otpCellError: { borderColor: theme.colors.danger },
   otpDigit: {
-    fontFamily: theme.fonts.medium,
-    fontWeight: '500',
-    fontSize: 26,
+    fontFamily: theme.fonts.regular,
+    fontWeight: '400',
+    fontSize: 20,
     color: theme.colors.ink,
   },
   caret: {
     width: 2,
-    height: 26,
+    height: 20,
     borderRadius: 1,
     backgroundColor: theme.colors.primary,
   },

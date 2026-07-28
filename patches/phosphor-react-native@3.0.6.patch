@@ -1,0 +1,12 @@
+diff --git a/src/lib/icon-base.tsx b/src/lib/icon-base.tsx
+index 28da945d155e294fb7408f4c5aff525767598465..49cc7e30966343044c4051c3926db274e063c70e 100644
+--- a/src/lib/icon-base.tsx
++++ b/src/lib/icon-base.tsx
+@@ -45,6 +45,7 @@ function IconBase({
+           }),
+         },
+       ]}
++      // @ts-expect-error react-native-svg's SvgProps doesn't declare className (NativeWind interop prop)
+       className={`${name}-${weight}__svg-icon-phosphor`}
+       testID={props.testID ?? `phosphor-react-native-${name}-${weight}`}
+       fill="currentColor"

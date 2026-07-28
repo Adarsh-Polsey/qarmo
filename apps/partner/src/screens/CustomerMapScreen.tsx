@@ -1,12 +1,11 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { StyleSheet, View, Dimensions, Platform, TouchableOpacity, Linking, ActivityIndicator } from 'react-native';
-import { theme, Text, Button } from '@qarmo/ui';
+import { theme, Text, Button, IconMapPin, IconScooter, IconTaxi } from '@qarmo/ui';
 import { useTranslation } from '@qarmo/i18n';
 import MapView, { Marker, Region } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { supabase } from '@qarmo/supabase';
 import { GlobalCounter } from '../components/GlobalCounter';
-import { Ionicons } from '@expo/vector-icons';
 import { logger } from '../utils/logger';
 
 const TAG = 'Map';
@@ -139,7 +138,7 @@ export const CustomerMapScreen: React.FC = () => {
       
       {locationDenied && (
         <View style={styles.banner}>
-          <Ionicons name="location-outline" size={20} color={theme.colors.ink} style={{ marginRight: 8 }} />
+          <IconMapPin size={20} color={theme.colors.ink} style={{ marginRight: 8 }} />
           <Text variant="caption" style={styles.bannerText}>
             {t('map.locationDenied', { defaultValue: 'Turn on location to see partners near you.' })}
           </Text>
@@ -166,7 +165,11 @@ export const CustomerMapScreen: React.FC = () => {
             tracksViewChanges={false} // Performance optimization for simple icons
           >
             <View style={styles.markerContainer}>
-              <Text style={styles.markerText}>{p.partner_type === 'delivery' ? '🛵' : '🛺'}</Text>
+              {p.partner_type === 'delivery' ? (
+                <IconScooter size={18} color={theme.colors.ink} />
+              ) : (
+                <IconTaxi size={18} color={theme.colors.ink} />
+              )}
             </View>
           </Marker>
         ))}
@@ -219,11 +222,12 @@ const styles = StyleSheet.create({
   markerContainer: {
     width: 32,
     height: 32,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  markerText: {
-    fontSize: 24,
+    backgroundColor: theme.colors.background,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
   hintContainer: {
     position: 'absolute',
