@@ -16,6 +16,8 @@ export interface InputProps extends TextInputProps {
   label?: string;
   error?: string;
   containerStyle?: StyleProp<ViewStyle>;
+  /** Compact sizing — shorter box and smaller text for dense forms. */
+  dense?: boolean;
 }
 
 export const Input: React.FC<InputProps> = ({
@@ -23,6 +25,7 @@ export const Input: React.FC<InputProps> = ({
   error,
   containerStyle,
   style,
+  dense,
   onFocus,
   onBlur,
   ...props
@@ -52,9 +55,9 @@ export const Input: React.FC<InputProps> = ({
           {label}
         </Text>
       )}
-      <View style={[styles.inputWrapper, { borderColor }]}>
+      <View style={[styles.inputWrapper, dense && styles.inputWrapperDense, { borderColor }]}>
         <TextInput
-          style={[styles.input, style]}
+          style={[styles.input, dense && styles.inputDense, style]}
           onFocus={handleFocus}
           onBlur={handleBlur}
           placeholderTextColor={theme.colors.mutedText}
@@ -86,10 +89,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.md,
     justifyContent: 'center',
   },
+  inputWrapperDense: {
+    height: 46,
+    paddingHorizontal: theme.spacing.sm,
+  },
   input: {
     ...theme.typography.body,
     color: theme.colors.ink,
     paddingVertical: 0,
+  },
+  inputDense: {
+    fontSize: 15,
+    lineHeight: 20,
   },
   errorText: {
     marginTop: theme.spacing.xs,

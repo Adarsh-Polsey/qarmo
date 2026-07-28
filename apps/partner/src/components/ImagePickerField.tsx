@@ -103,38 +103,54 @@ export const ImagePickerField: React.FC<Props> = ({
     }
   };
 
+  const filled = !!value;
+
   return (
     <View style={styles.wrap}>
-      <Text variant="caption" color={theme.colors.ink} style={styles.label}>
-        {label}
-      </Text>
-      {hint ? (
-        <Text variant="caption" color={theme.colors.mutedText} style={styles.hint}>
-          {hint}
-        </Text>
-      ) : null}
-
-      <View style={styles.row}>
-        <View style={[styles.preview, shape === 'circle' && styles.previewCircle]}>
-          {value ? (
-            <Image source={{ uri: value }} style={styles.previewImage} resizeMode="cover" />
+      {/* Compact file row: thumbnail · label/status · pick actions */}
+      <View style={[styles.row, filled && styles.rowFilled]}>
+        <View style={[styles.tile, shape === 'circle' && styles.tileCircle]}>
+          {filled ? (
+            <Image source={{ uri: value }} style={styles.tileImage} resizeMode="cover" />
           ) : (
             <Text style={styles.placeholderIcon}>{placeholderIcon}</Text>
           )}
         </View>
 
+        <View style={styles.info}>
+          <Text variant="caption" color={theme.colors.ink} style={styles.title} numberOfLines={1}>
+            {label}
+          </Text>
+          <Text
+            variant="caption"
+            color={filled ? theme.colors.success : theme.colors.mutedText}
+            style={styles.subtitle}
+            numberOfLines={1}
+          >
+            {filled
+              ? `✓  ${t('wizard.attached', { defaultValue: 'Attached' })}`
+              : hint || t('wizard.notAdded', { defaultValue: 'Not added yet' })}
+          </Text>
+        </View>
+
         <View style={styles.actions}>
-          <TouchableOpacity style={styles.actionBtn} onPress={() => handlePick(true)} activeOpacity={0.8}>
-            <Text style={styles.actionIcon}>📷</Text>
-            <Text variant="caption" color={theme.colors.ink} style={styles.actionLabel}>
-              {t('wizard.takePhoto', { defaultValue: 'Take photo' })}
-            </Text>
+          <TouchableOpacity
+            style={styles.iconBtn}
+            onPress={() => handlePick(true)}
+            activeOpacity={0.7}
+            hitSlop={6}
+            accessibilityLabel={t('wizard.takePhoto', { defaultValue: 'Take photo' })}
+          >
+            <Text style={styles.iconGlyph}>📷</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.actionBtn} onPress={() => handlePick(false)} activeOpacity={0.8}>
-            <Text style={styles.actionIcon}>🖼️</Text>
-            <Text variant="caption" color={theme.colors.ink} style={styles.actionLabel}>
-              {t('wizard.chooseGallery', { defaultValue: 'Gallery' })}
-            </Text>
+          <TouchableOpacity
+            style={styles.iconBtn}
+            onPress={() => handlePick(false)}
+            activeOpacity={0.7}
+            hitSlop={6}
+            accessibilityLabel={t('wizard.chooseGallery', { defaultValue: 'Gallery' })}
+          >
+            <Text style={styles.iconGlyph}>🖼️</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -150,68 +166,74 @@ export const ImagePickerField: React.FC<Props> = ({
 
 const styles = StyleSheet.create({
   wrap: {
-    marginBottom: theme.spacing.md,
-  },
-  label: {
-    fontFamily: theme.fonts.medium,
-    fontWeight: '500',
-    marginBottom: theme.spacing.xs,
-  },
-  hint: {
     marginBottom: theme.spacing.sm,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: theme.spacing.md,
-  },
-  preview: {
-    width: 88,
-    height: 88,
-    borderRadius: theme.radius.md,
-    overflow: 'hidden',
+    gap: theme.spacing.sm,
+    padding: theme.spacing.sm,
     borderWidth: 1,
     borderColor: theme.colors.border,
+    borderRadius: theme.radius.md,
+    backgroundColor: theme.colors.background,
+  },
+  // Subtle tint once a file is attached, so "done" reads at a glance.
+  rowFilled: {
+    borderColor: theme.colors.success,
+  },
+  tile: {
+    width: 44,
+    height: 44,
+    borderRadius: theme.radius.sm,
+    overflow: 'hidden',
     backgroundColor: theme.colors.surface,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  previewCircle: {
-    borderRadius: 44,
+  tileCircle: {
+    borderRadius: 22,
   },
-  previewImage: {
+  tileImage: {
     width: '100%',
     height: '100%',
   },
   placeholderIcon: {
-    fontSize: 32,
+    fontSize: 20,
   },
-  actions: {
+  info: {
     flex: 1,
-    flexDirection: 'row',
-    gap: theme.spacing.sm,
   },
-  actionBtn: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: theme.colors.primary,
-    borderRadius: theme.radius.sm,
-    paddingVertical: theme.spacing.md,
-    alignItems: 'center',
-    gap: theme.spacing.xs,
-    backgroundColor: theme.colors.background,
-    minHeight: 72,
-    justifyContent: 'center',
-  },
-  actionIcon: {
-    fontSize: 22,
-  },
-  actionLabel: {
+  title: {
     fontFamily: theme.fonts.medium,
     fontWeight: '500',
-    textAlign: 'center',
+    fontSize: 14,
+    lineHeight: 18,
+  },
+  subtitle: {
+    fontSize: 12,
+    lineHeight: 16,
+    marginTop: 1,
+  },
+  actions: {
+    flexDirection: 'row',
+    gap: theme.spacing.xs,
+  },
+  iconBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: theme.radius.sm,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  iconGlyph: {
+    fontSize: 18,
   },
   error: {
-    marginTop: theme.spacing.sm,
+    marginTop: theme.spacing.xs,
+    marginLeft: theme.spacing.xs,
   },
 });

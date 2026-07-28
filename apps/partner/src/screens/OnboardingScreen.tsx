@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   StyleSheet,
   View,
@@ -8,6 +8,9 @@ import {
   FlatList,
   KeyboardAvoidingView,
   Platform,
+  Animated,
+  Easing,
+  LayoutChangeEvent,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme, Text, Button, Input } from '@qarmo/ui';
@@ -35,32 +38,76 @@ const isValidPlate = (val: string) => {
   return /^[A-Z]{2}\d{2}[A-Z]{1,2}\d{4}$/.test(clean);
 };
 
-/**
- * Top-level account choice, styled as a light tab bar: an icon over a label with
- * an ink underline marking the active tab (no boxes). Left-aligned, airy.
- */
-const SegmentTab: React.FC<{
-  icon: string;
-  label: string;
-  selected: boolean;
-  onPress: () => void;
-}> = ({ icon, label, selected, onPress }) => (
-  <TouchableOpacity style={styles.tab} onPress={onPress} activeOpacity={0.7}>
-    <Text style={styles.tabIcon}>{icon}</Text>
-    <Text
-      variant="caption"
-      color={selected ? theme.colors.ink : theme.colors.mutedText}
-      style={styles.tabLabel}
-    >
-      {label}
-    </Text>
-    <View style={[styles.tabUnderline, selected && styles.tabUnderlineActive]} />
-  </TouchableOpacity>
-);
+/** Springy slide config shared by the tab underline and the pill thumb. */
+const SLIDE = { duration: 240, easing: Easing.out(Easing.cubic), useNativeDriver: true };
+
+/** Inner padding of the segmented-pill track — the thumb inset on every side. */
+const SEG_PAD = 4;
 
 /**
- * Two-way choice, styled as a segmented pill: a grey track with the active
- * option shown as a white pill outlined by a soft 1px border.
+ * Top-level account choice, styled as a full-width tab bar: plain labels over a
+ * hairline track with an ink underline that slides to the active tab (no icons,
+ * no boxes).
+ */
+function AccountTabs<T extends string>({
+  options,
+  value,
+  onChange,
+}: {
+  options: { value: T; label: string }[];
+  value: string;
+  onChange: (value: T) => void;
+}) {
+  const [width, setWidth] = useState(0);
+  const anim = useRef(new Animated.Value(0)).current;
+  const index = Math.max(0, options.findIndex((o) => o.value === value));
+  const segW = width / options.length;
+
+  useEffect(() => {
+    Animated.timing(anim, { toValue: index, ...SLIDE }).start();
+  }, [index, anim]);
+
+  const translateX = anim.interpolate({
+    inputRange: options.map((_, i) => i),
+    outputRange: options.map((_, i) => i * segW),
+  });
+
+  return (
+    <View
+      style={styles.tabRow}
+      onLayout={(e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width)}
+    >
+      {options.map((opt) => {
+        const active = opt.value === value;
+        return (
+          <TouchableOpacity
+            key={opt.value}
+            style={styles.tab}
+            onPress={() => onChange(opt.value)}
+            activeOpacity={0.7}
+          >
+            <Text
+              variant="body"
+              color={active ? theme.colors.ink : theme.colors.mutedText}
+              style={styles.tabLabel}
+            >
+              {opt.label}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
+      {width > 0 && (
+        <Animated.View
+          style={[styles.tabIndicator, { width: segW, transform: [{ translateX }] }]}
+        />
+      )}
+    </View>
+  );
+}
+
+/**
+ * Two-way choice, styled as a segmented pill: a grey track with a white thumb
+ * (soft 1px border) that slides to the active option.
  */
 function SegmentedPill<T extends string>({
   options,
@@ -71,14 +118,36 @@ function SegmentedPill<T extends string>({
   value: string;
   onChange: (value: T) => void;
 }) {
+  const [width, setWidth] = useState(0);
+  const anim = useRef(new Animated.Value(0)).current;
+  const index = Math.max(0, options.findIndex((o) => o.value === value));
+  const segW = width > 0 ? (width - SEG_PAD * 2) / options.length : 0;
+
+  useEffect(() => {
+    Animated.timing(anim, { toValue: index, ...SLIDE }).start();
+  }, [index, anim]);
+
+  const translateX = anim.interpolate({
+    inputRange: options.map((_, i) => i),
+    outputRange: options.map((_, i) => i * segW),
+  });
+
   return (
-    <View style={styles.segTrack}>
+    <View
+      style={styles.segTrack}
+      onLayout={(e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width)}
+    >
+      {width > 0 && (
+        <Animated.View
+          style={[styles.segThumb, { width: segW, transform: [{ translateX }] }]}
+        />
+      )}
       {options.map((opt) => {
         const active = opt.value === value;
         return (
           <TouchableOpacity
             key={opt.value}
-            style={[styles.segItem, active && styles.segItemActive]}
+            style={styles.segItem}
             onPress={() => onChange(opt.value)}
             activeOpacity={0.8}
           >
@@ -234,21 +303,19 @@ export const OnboardingScreen: React.FC<Props> = ({
             {t('onboarding.subtitle', { defaultValue: 'Tell us how you’ll use Qarmo' })}
           </Text>
 
-          {/* Account type — tab bar, replaces the old standalone selection page */}
-          <View style={styles.tabRow}>
-            <SegmentTab
-              icon={t('accountType.customerIcon', { defaultValue: '🧍' })}
-              label={t('accountType.customer', { defaultValue: 'Customer' })}
-              selected={isCustomer}
-              onPress={() => onUpdate({ accountType: 'customer', partnerType: '' })}
-            />
-            <SegmentTab
-              icon={t('accountType.partnerIcon', { defaultValue: '🛺' })}
-              label={t('accountType.partner', { defaultValue: 'Partner' })}
-              selected={isPartner}
-              onPress={() => onUpdate({ accountType: 'partner' })}
-            />
-          </View>
+          {/* Account type — full-width tab bar, replaces the old selection page */}
+          <AccountTabs
+            value={accountType}
+            onChange={(next) =>
+              next === 'customer'
+                ? onUpdate({ accountType: 'customer', partnerType: '' })
+                : onUpdate({ accountType: 'partner', partnerType: partnerType || 'auto' })
+            }
+            options={[
+              { value: 'customer', label: t('accountType.customer', { defaultValue: 'Customer' }) },
+              { value: 'partner', label: t('accountType.partner', { defaultValue: 'Partner' }) },
+            ]}
+          />
 
           {/* Customer — just a name */}
           {isCustomer && (
@@ -257,6 +324,7 @@ export const OnboardingScreen: React.FC<Props> = ({
                 {t('onboarding.aboutYou', { defaultValue: 'About you' })}
               </Text>
               <Input
+                dense
                 placeholder={t('wizard.namePlaceholder', { defaultValue: 'e.g. Amal Kumar' })}
                 value={fullName}
                 onChangeText={(val) => onUpdate({ fullName: val })}
@@ -273,14 +341,14 @@ export const OnboardingScreen: React.FC<Props> = ({
                 onChange={(value) => onUpdate({ partnerType: value })}
                 options={[
                   {
-                    value: 'delivery',
-                    icon: t('partnerType.deliveryIcon', { defaultValue: '🛵' }),
-                    label: t('partnerType.delivery', { defaultValue: 'Delivery' }),
-                  },
-                  {
                     value: 'auto',
                     icon: t('partnerType.rideIcon', { defaultValue: '🛺' }),
                     label: t('partnerType.ride', { defaultValue: 'Ride' }),
+                  },
+                  {
+                    value: 'delivery',
+                    icon: t('partnerType.deliveryIcon', { defaultValue: '🛵' }),
+                    label: t('partnerType.delivery', { defaultValue: 'Delivery' }),
                   },
                 ]}
               />
@@ -292,6 +360,7 @@ export const OnboardingScreen: React.FC<Props> = ({
                 </Text>
 
                 <Input
+                  dense
                   placeholder={t('wizard.namePlaceholder', { defaultValue: 'e.g. Amal Kumar' })}
                   value={fullName}
                   onChangeText={(val) => onUpdate({ fullName: val })}
@@ -306,7 +375,11 @@ export const OnboardingScreen: React.FC<Props> = ({
                   onPress={() => setCityModalVisible(true)}
                   activeOpacity={0.8}
                 >
-                  <Text variant="body" color={city ? theme.colors.ink : theme.colors.mutedText}>
+                  <Text
+                    variant="body"
+                    color={city ? theme.colors.ink : theme.colors.mutedText}
+                    style={styles.pickerText}
+                  >
                     {city || t('wizard.selectCity', { defaultValue: 'Select your city' })}
                   </Text>
                 </TouchableOpacity>
@@ -322,6 +395,7 @@ export const OnboardingScreen: React.FC<Props> = ({
                   {t('wizard.plateNumber', { defaultValue: 'Vehicle number' })}
                 </Text>
                 <Input
+                  dense
                   placeholder={t('wizard.plateHint', { defaultValue: 'e.g. KL 07 BZ 1234' })}
                   value={plateNumber}
                   onChangeText={(val) => onUpdate({ plateNumber: val.toUpperCase() })}
@@ -369,6 +443,7 @@ export const OnboardingScreen: React.FC<Props> = ({
                   </Text>
                 </Text>
                 <Input
+                  dense
                   placeholder="e.g. ABC123"
                   value={referralCode}
                   onChangeText={(text) => {
@@ -475,62 +550,62 @@ const styles = StyleSheet.create({
     paddingTop: theme.spacing.sm,
     paddingBottom: theme.spacing.lg,
   },
-  title: { fontSize: 22, marginBottom: theme.spacing.xs },
-  subtitle: { fontSize: 15, marginBottom: theme.spacing.lg },
-  // Account tabs (icon over label + active underline) — flat, no boxes
+  title: { fontSize: 20, lineHeight: 26, marginBottom: 2 },
+  subtitle: { fontSize: 13, lineHeight: 18, marginBottom: theme.spacing.md },
+  // Account tabs — full-width labels over a hairline track, sliding ink underline
   tabRow: {
     flexDirection: 'row',
-    gap: theme.spacing.xl,
-    marginBottom: theme.spacing.lg,
+    marginBottom: theme.spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
   },
   tab: {
+    flex: 1,
     alignItems: 'center',
-  },
-  tabIcon: {
-    fontSize: 26,
-    marginBottom: theme.spacing.xs,
+    paddingVertical: theme.spacing.sm,
   },
   tabLabel: {
     fontFamily: theme.fonts.medium,
     fontWeight: '500',
-    fontSize: 15,
+    fontSize: 14,
     textAlign: 'center',
   },
-  tabUnderline: {
+  tabIndicator: {
+    position: 'absolute',
+    bottom: -1,
+    left: 0,
     height: 2,
-    width: '100%',
     borderRadius: 1,
-    marginTop: theme.spacing.sm,
-    backgroundColor: 'transparent',
-  },
-  tabUnderlineActive: {
     backgroundColor: theme.colors.ink,
   },
-  // Segmented pill (grey track, white active pill with soft border)
+  // Segmented pill (grey track, sliding white thumb with soft border)
   segTrack: {
     flexDirection: 'row',
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radius.full,
-    padding: 4,
-    marginBottom: theme.spacing.lg,
+    padding: SEG_PAD,
+    marginBottom: theme.spacing.md,
+  },
+  segThumb: {
+    position: 'absolute',
+    top: SEG_PAD,
+    bottom: SEG_PAD,
+    left: SEG_PAD,
+    borderRadius: theme.radius.full,
+    backgroundColor: theme.colors.background,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
   segItem: {
     flex: 1,
-    paddingVertical: 10,
+    paddingVertical: 9,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: theme.radius.full,
-    borderWidth: 1,
-    borderColor: 'transparent',
-  },
-  segItemActive: {
-    backgroundColor: theme.colors.background,
-    borderColor: theme.colors.border,
   },
   segLabel: {
     fontFamily: theme.fonts.medium,
     fontWeight: '500',
-    fontSize: 15,
+    fontSize: 14,
   },
   card: {
     backgroundColor: theme.colors.background,
@@ -543,26 +618,31 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontFamily: theme.fonts.medium,
     fontWeight: '500',
+    fontSize: 11,
+    lineHeight: 14,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
     marginBottom: theme.spacing.sm,
   },
   fieldLabel: {
     fontFamily: theme.fonts.medium,
     fontWeight: '500',
+    fontSize: 13,
+    lineHeight: 16,
     marginBottom: theme.spacing.xs,
     marginTop: theme.spacing.sm,
   },
   picker: {
-    height: 48,
+    height: 46,
     borderWidth: 1,
     borderColor: theme.colors.border,
     borderRadius: theme.radius.sm,
     backgroundColor: theme.colors.surface,
-    paddingHorizontal: theme.spacing.md,
+    paddingHorizontal: theme.spacing.sm,
     justifyContent: 'center',
   },
-  inlineHint: { marginTop: theme.spacing.xs },
+  pickerText: { fontSize: 15, lineHeight: 20 },
+  inlineHint: { fontSize: 12, lineHeight: 15, marginTop: theme.spacing.xs },
   spacer: { height: theme.spacing.sm },
   formError: { marginTop: theme.spacing.sm, textAlign: 'center' },
   footer: {
