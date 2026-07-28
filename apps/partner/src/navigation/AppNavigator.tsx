@@ -618,41 +618,12 @@ export const AppNavigator: React.FC = () => {
         },
       };
 
-      // 5. Direct database update on profiles table as a baseline guarantee
-      const doneDirectUpdate = logger.time(TAG, 'Direct profile update (baseline)');
-      let { error: directUpdateErr } = await supabase.from('profiles').update({
-        full_name: formData.fullName,
-        city: formData.city,
-        account_type: 'partner',
-        partner_type: partnerType === 'auto' ? 'ride' : 'delivery',
-        plate_number: formData.plateNumber || null,
-        referred_by: validReferralCode || null,
-        photo_url: avatarPath || profile?.photo_url || null,
-        profile_completed_at: new Date().toISOString(),
-      }).eq('id', user.id);
-
-      if (directUpdateErr && (directUpdateErr.code === 'PGRST204' || directUpdateErr.message?.includes('column'))) {
-        logger.warn(TAG, 'Direct update hit a missing column — retrying with the base column set', {
-          code: directUpdateErr.code,
-        });
-        // Fallback update for standard profiles columns if new schema columns are missing
-        const fallbackRes = await supabase.from('profiles').update({
-          full_name: formData.fullName,
-          city: formData.city,
-          photo_url: avatarPath || profile?.photo_url || null,
-          profile_completed_at: new Date().toISOString(),
-        }).eq('id', user.id);
-        directUpdateErr = fallbackRes.error;
-      }
-
-      if (directUpdateErr) {
-        console.warn('Direct profile update warning:', directUpdateErr.message);
-        doneDirectUpdate('fail', { message: directUpdateErr.message });
-      } else {
-        doneDirectUpdate('ok');
-      }
-
-      // 6. Invoke complete-profile edge function (for referrals & vehicle insertion)
+      // 5. Invoke complete-profile edge function FIRST (for referral-code generation,
+      // referral awarding & vehicle insertion). This must run before the direct
+      // update below: the complete_profile RPC only generates a referral_code while
+      // profile_completed_at is still null, so if the direct baseline update stamped
+      // profile_completed_at first, the RPC would short-circuit on its idempotency
+      // guard and the partner would never get a code (dashboard "Your code:" blank).
       const doneEdgeFn = logger.time(TAG, 'Invoke complete-profile edge function');
       try {
         const { data: funcData, error: funcError } = await supabase.functions.invoke('complete-profile', {
@@ -687,6 +658,43 @@ export const AppNavigator: React.FC = () => {
       } catch (funcErr: any) {
         console.warn('Edge function invoke exception:', funcErr.message);
         doneEdgeFn('fail', { message: funcErr?.message });
+      }
+
+      // 6. Direct database update on profiles table as a baseline guarantee and to
+      // persist partner-only columns the RPC doesn't set (plate_number, referred_by).
+      // Runs AFTER the edge function so it never pre-empts referral-code generation;
+      // it deliberately does not touch referral_code, so the RPC-generated code stays.
+      const doneDirectUpdate = logger.time(TAG, 'Direct profile update (baseline)');
+      let { error: directUpdateErr } = await supabase.from('profiles').update({
+        full_name: formData.fullName,
+        city: formData.city,
+        account_type: 'partner',
+        partner_type: partnerType === 'auto' ? 'ride' : 'delivery',
+        plate_number: formData.plateNumber || null,
+        referred_by: validReferralCode || null,
+        photo_url: avatarPath || profile?.photo_url || null,
+        profile_completed_at: new Date().toISOString(),
+      }).eq('id', user.id);
+
+      if (directUpdateErr && (directUpdateErr.code === 'PGRST204' || directUpdateErr.message?.includes('column'))) {
+        logger.warn(TAG, 'Direct update hit a missing column — retrying with the base column set', {
+          code: directUpdateErr.code,
+        });
+        // Fallback update for standard profiles columns if new schema columns are missing
+        const fallbackRes = await supabase.from('profiles').update({
+          full_name: formData.fullName,
+          city: formData.city,
+          photo_url: avatarPath || profile?.photo_url || null,
+          profile_completed_at: new Date().toISOString(),
+        }).eq('id', user.id);
+        directUpdateErr = fallbackRes.error;
+      }
+
+      if (directUpdateErr) {
+        console.warn('Direct profile update warning:', directUpdateErr.message);
+        doneDirectUpdate('fail', { message: directUpdateErr.message });
+      } else {
+        doneDirectUpdate('ok');
       }
 
       logger.info(TAG, 'handlePartnerSubmit — finished, resetting wizard');

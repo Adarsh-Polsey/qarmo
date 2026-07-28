@@ -92,9 +92,7 @@ export const WizardReferralScreen: React.FC<Props> = ({
     }
   };
 
-  const handleSkip = async () => {
-    await handleComplete(null);
-  };
+  const hasCode = code.trim().length > 0;
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -129,25 +127,19 @@ export const WizardReferralScreen: React.FC<Props> = ({
 
         {/* Footer */}
         <View style={styles.footer}>
-          <View style={styles.buttonsRow}>
-            <Button
-              label={t('wizard.skip', { defaultValue: 'Skip' })}
-              variant="ghost"
-              disabled={submitting}
-              onPress={handleSkip}
-              style={styles.footerBtn}
-            />
-            <Button
-              label={t('wizard.finish', { defaultValue: 'Finish' })}
-              variant="primary"
-              disabled={submitting}
-              loading={submitting}
-              onPress={validateAndFinish}
-              style={styles.footerBtn}
-            />
-          </View>
           <Button
-            label={t('common.cancel', { defaultValue: 'Cancel' })}
+            label={
+              hasCode
+                ? t('wizard.finish', { defaultValue: 'Finish' })
+                : t('wizard.skipAndFinish', { defaultValue: 'Skip & Finish' })
+            }
+            variant="primary"
+            disabled={submitting}
+            loading={submitting}
+            onPress={validateAndFinish}
+          />
+          <Button
+            label={t('common.back', { defaultValue: 'Back' })}
             variant="ghost"
             disabled={submitting}
             onPress={onBack}
@@ -170,7 +162,5 @@ const styles = StyleSheet.create({
   content: { flex: 1, justifyContent: 'center' },
   title: { marginBottom: theme.spacing.sm },
   hint: { marginBottom: theme.spacing.xl },
-  footer: { gap: theme.spacing.sm, alignItems: 'center' },
-  buttonsRow: { flexDirection: 'row', gap: theme.spacing.md, width: '100%' },
-  footerBtn: { flex: 1 },
+  footer: { gap: theme.spacing.sm },
 });
