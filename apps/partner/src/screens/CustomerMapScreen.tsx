@@ -1,21 +1,26 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { StyleSheet, View, Dimensions, Platform, TouchableOpacity, Linking, ActivityIndicator } from 'react-native';
-import { theme, Text, Button, IconMapPin, IconScooter, IconTaxi } from '@qarmo/ui';
+import { StyleSheet, View, Platform, TouchableOpacity, Linking, ActivityIndicator } from 'react-native';
+import { theme, Text, IconMapPin, IconScooter, IconTaxi } from '@qarmo/ui';
 import { useTranslation } from '@qarmo/i18n';
-import MapView, { Marker, Region } from 'react-native-maps';
+import {
+  Map,
+  Camera,
+  ViewAnnotation,
+  UserLocation,
+  type ViewStateChangeEvent,
+  type LngLat,
+} from '@maplibre/maplibre-react-native';
 import * as Location from 'expo-location';
 import { supabase } from '@qarmo/supabase';
 import { GlobalCounter } from '../components/GlobalCounter';
 import { logger } from '../utils/logger';
+import { OLA_MAPS_STYLE_URL } from '../config/olaMaps';
 
 const TAG = 'Map';
 
-const KOCHI_REGION: Region = {
-  latitude: 10.0158605,
-  longitude: 76.3418666,
-  latitudeDelta: 0.1,
-  longitudeDelta: 0.1,
-};
+const KOCHI_CENTER: LngLat = [76.3418666, 10.0158605];
+const DEFAULT_ZOOM = 12; // roughly matches the old 0.1° fallback region
+const GPS_ZOOM = 14; // roughly matches the old 0.05° GPS-centered region
 
 interface PartnerPin {
   id: string;
@@ -26,12 +31,12 @@ interface PartnerPin {
 
 export const CustomerMapScreen: React.FC = () => {
   const { t } = useTranslation();
-  const [initialRegion, setInitialRegion] = useState<Region>(KOCHI_REGION);
+  const [initialCenter, setInitialCenter] = useState<LngLat>(KOCHI_CENTER);
+  const [initialZoom, setInitialZoom] = useState<number>(DEFAULT_ZOOM);
   const [locationDenied, setLocationDenied] = useState(false);
   const [isReady, setIsReady] = useState(false);
   const [partners, setPartners] = useState<PartnerPin[]>([]);
   const [showZoomHint, setShowZoomHint] = useState(false);
-  const mapRef = useRef<MapView>(null);
   const fetchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const fetchCounterRef = useRef(0);
   const rpcFailedRef = useRef(false); // stop retries if RPC missing
@@ -42,40 +47,32 @@ export const CustomerMapScreen: React.FC = () => {
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== 'granted') {
           setLocationDenied(true);
-          setInitialRegion(KOCHI_REGION);
+          setInitialCenter(KOCHI_CENTER);
           setIsReady(true);
           return;
         }
 
         const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-        setInitialRegion({
-          latitude: loc.coords.latitude,
-          longitude: loc.coords.longitude,
-          latitudeDelta: 0.05,
-          longitudeDelta: 0.05,
-        });
+        setInitialCenter([loc.coords.longitude, loc.coords.latitude]);
+        setInitialZoom(GPS_ZOOM);
       } catch (err) {
         console.warn('Location error:', err);
         setLocationDenied(true);
-        setInitialRegion(KOCHI_REGION);
+        setInitialCenter(KOCHI_CENTER);
       } finally {
         setIsReady(true);
       }
     })();
   }, []);
 
-  const fetchPartnersInRegion = async (region: Region) => {
+  const fetchPartnersInBounds = async ([min_lng, min_lat, max_lng, max_lat]: [number, number, number, number]) => {
     if (rpcFailedRef.current) {
       logger.info(TAG, 'Skipping partners_in_bounds fetch — RPC already known unavailable this session');
       return;
     }
     const fetchId = ++fetchCounterRef.current;
-    const min_lat = region.latitude - region.latitudeDelta / 2;
-    const max_lat = region.latitude + region.latitudeDelta / 2;
-    const min_lng = region.longitude - region.longitudeDelta / 2;
-    const max_lng = region.longitude + region.longitudeDelta / 2;
 
-    const done = logger.time(TAG, `fetchPartnersInRegion (fetchId=${fetchId})`);
+    const done = logger.time(TAG, `fetchPartnersInBounds (fetchId=${fetchId})`);
     const { data, error } = await supabase.rpc('partners_in_bounds', {
       min_lng,
       min_lat,
@@ -104,12 +101,13 @@ export const CustomerMapScreen: React.FC = () => {
     }
   };
 
-  const onRegionChangeComplete = useCallback((region: Region) => {
+  const onRegionDidChange = useCallback((event: { nativeEvent: ViewStateChangeEvent }) => {
+    const { bounds } = event.nativeEvent;
     if (fetchTimeoutRef.current) {
       clearTimeout(fetchTimeoutRef.current);
     }
     fetchTimeoutRef.current = setTimeout(() => {
-      fetchPartnersInRegion(region);
+      fetchPartnersInBounds(bounds);
     }, 400);
   }, []);
 
@@ -150,20 +148,13 @@ export const CustomerMapScreen: React.FC = () => {
         </View>
       )}
 
-      <MapView
-        ref={mapRef}
-        style={styles.map}
-        initialRegion={initialRegion}
-        onRegionChangeComplete={onRegionChangeComplete}
-        showsUserLocation={!locationDenied}
-        showsMyLocationButton={!locationDenied}
-      >
+      <Map style={styles.map} mapStyle={OLA_MAPS_STYLE_URL} onRegionDidChange={onRegionDidChange}>
+        <Camera initialViewState={{ center: initialCenter, zoom: initialZoom }} />
+
+        {!locationDenied && <UserLocation />}
+
         {partners.map((p) => (
-          <Marker
-            key={p.id}
-            coordinate={{ latitude: p.lat, longitude: p.lng }}
-            tracksViewChanges={false} // Performance optimization for simple icons
-          >
+          <ViewAnnotation key={p.id} id={p.id} lngLat={[p.lng, p.lat]}>
             <View style={styles.markerContainer}>
               {p.partner_type === 'delivery' ? (
                 <IconScooter size={18} color={theme.colors.ink} />
@@ -171,9 +162,9 @@ export const CustomerMapScreen: React.FC = () => {
                 <IconTaxi size={18} color={theme.colors.ink} />
               )}
             </View>
-          </Marker>
+          </ViewAnnotation>
         ))}
-      </MapView>
+      </Map>
 
       {showZoomHint && (
         <View style={styles.hintContainer}>
@@ -202,7 +193,6 @@ const styles = StyleSheet.create({
   },
   map: {
     flex: 1,
-    width: Dimensions.get('window').width,
   },
   banner: {
     flexDirection: 'row',
