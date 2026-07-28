@@ -21,20 +21,23 @@ interface Props {
   /** Which wizard step this phone screen is (e.g. 1 for customer, 1 for partner) */
   currentStep: number;
   totalSteps: number;
-  onOtpSent: (formattedPhone: string) => void;
+  /** Restores previously-typed digits when navigating back from the OTP screen */
+  initialPhone?: string;
+  onOtpSent: (formattedPhone: string, rawPhone: string) => void;
   onBack: () => void;
 }
 
 export const WizardPhoneScreen: React.FC<Props> = ({
   currentStep,
   totalSteps,
+  initialPhone = '',
   onOtpSent,
   onBack,
 }) => {
   const { t } = useTranslation();
   const { signInWithPhone } = useAuth();
 
-  const [phone, setPhone] = useState('');
+  const [phone, setPhone] = useState(initialPhone);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [confirmVisible, setConfirmVisible] = useState(false);
@@ -63,7 +66,7 @@ export const WizardPhoneScreen: React.FC<Props> = ({
     try {
       await signInWithPhone(formattedPhone);
       setConfirmVisible(false);
-      onOtpSent(formattedPhone);
+      onOtpSent(formattedPhone, phone);
     } catch (err: any) {
       setConfirmVisible(false);
       setErrorMsg(err.message || t('common.error'));

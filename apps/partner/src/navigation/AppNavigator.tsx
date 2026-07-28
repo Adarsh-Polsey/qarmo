@@ -78,6 +78,9 @@ export const AppNavigator: React.FC = () => {
   const [preAuthScreen, setPreAuthScreen] = useState<PreAuthScreen>('welcome');
   // Phone formatted for OTP (e.g. "+919876543210")
   const [otpPhone, setOtpPhone] = useState('');
+  // Raw digits typed on the phone screen, kept here (not just in WizardPhoneScreen's own
+  // state) so backing out of the OTP screen restores them instead of remounting to blank.
+  const [phoneDigits, setPhoneDigits] = useState('');
 
   // These are local UI state, not auth state — signOut() (in useAuth) has no way to
   // reset them itself. Without this, signing out leaves preAuthScreen wherever it was
@@ -90,6 +93,7 @@ export const AppNavigator: React.FC = () => {
     if (user) return;
     setPreAuthScreen('welcome');
     setOtpPhone('');
+    setPhoneDigits('');
     setActiveTab('home');
     resetWizard();
   }, [user, resetWizard]);
@@ -260,8 +264,10 @@ export const AppNavigator: React.FC = () => {
         <WizardPhoneScreen
           currentStep={1}
           totalSteps={AUTH_TOTAL_STEPS}
-          onOtpSent={(formattedPhone) => {
+          initialPhone={phoneDigits}
+          onOtpSent={(formattedPhone, rawPhone) => {
             setOtpPhone(formattedPhone);
+            setPhoneDigits(rawPhone);
             setPreAuthScreen('otp');
           }}
           onBack={() => setPreAuthScreen('welcome')}
@@ -397,6 +403,9 @@ export const AppNavigator: React.FC = () => {
           // Aadhaar/licence are the required compliance documents (B-22/B-23) — unlike the
           // best-effort avatar upload above, a failure here must stop Finish (B-25) rather
           // than silently completing registration with a missing partner_documents row.
+          // console.warn (unlike logger, which is __DEV__-only) is the one trace of this
+          // that survives in a production build, so it stays even though it duplicates doneDoc.
+          console.warn(`Doc upload failed for ${docType}:`, err?.message);
           doneDoc('fail', { message: err?.message });
           throw new Error(t('wizard.errors.uploadFailed', { defaultValue: 'Upload failed. Try again.' }));
         }
@@ -440,13 +449,17 @@ export const AppNavigator: React.FC = () => {
         if (error) console.warn('Failed to save licence DB record:', error.message);
       }
 
-      // 4. Build role/vehicle object for the complete-profile edge function
+      // 4. Build role/vehicle object for the complete-profile edge function.
+      // `partnerType` here and `profile?.partner_type` (DB) both use 'ride'/'delivery' —
+      // previously this compared against a stray 'auto' left over from the wizard's old
+      // internal naming, so a partner whose type came from `profile?.partner_type` (the
+      // fallback) was silently misclassified as delivery even when they were a ride partner.
       const partnerType = formData.partnerType || profile?.partner_type || 'delivery';
-      const roles = partnerType === 'auto' ? ['auto_driver'] : ['delivery_executive'];
+      const roles = partnerType === 'ride' ? ['auto_driver'] : ['delivery_executive'];
       const vehicleRole = roles[0];
       const vehiclesPayload = {
         [vehicleRole]: {
-          vehicleType: partnerType === 'auto' ? 'auto' : 'bike',
+          vehicleType: partnerType === 'ride' ? 'auto' : 'bike',
           registrationNumber: formData.plateNumber || '',
         },
       };
@@ -502,7 +515,7 @@ export const AppNavigator: React.FC = () => {
         full_name: formData.fullName,
         city: formData.city,
         account_type: 'partner',
-        partner_type: partnerType === 'auto' ? 'ride' : 'delivery',
+        partner_type: partnerType,
         plate_number: formData.plateNumber || null,
         referred_by: validReferralCode || null,
         photo_url: avatarPath || profile?.photo_url || null,

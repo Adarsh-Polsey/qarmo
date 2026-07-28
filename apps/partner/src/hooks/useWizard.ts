@@ -4,7 +4,7 @@ import { safeSecureStore as SecureStore } from '@qarmo/supabase';
 export interface WizardData {
   // Step 0 — pre-auth selections (stored locally before OTP)
   accountType: 'customer' | 'partner' | '';
-  partnerType: 'delivery' | 'auto' | '';
+  partnerType: 'delivery' | 'ride' | '';
 
   // Shared fields
   fullName: string;

@@ -78,9 +78,18 @@ function AccountTabs<T extends string>({
   const hasSelection = rawIndex !== -1;
   const index = Math.max(0, rawIndex);
   const segW = width / options.length;
+  // Tracks whether we've ever had a selection — the first tap should have the
+  // underline simply appear at that tab, not slide in from the (never-shown) first tab.
+  const hadSelectionRef = useRef(false);
 
   useEffect(() => {
-    if (hasSelection) Animated.timing(anim, { toValue: index, ...SLIDE }).start();
+    if (!hasSelection) return;
+    if (!hadSelectionRef.current) {
+      anim.setValue(index);
+      hadSelectionRef.current = true;
+      return;
+    }
+    Animated.timing(anim, { toValue: index, ...SLIDE }).start();
   }, [index, hasSelection, anim]);
 
   const translateX = anim.interpolate({
@@ -225,7 +234,7 @@ export const OnboardingScreen: React.FC<Props> = ({
   const customerReady = isCustomer && nameValid;
   const partnerReady =
     isPartner &&
-    (partnerType === 'delivery' || partnerType === 'auto') &&
+    (partnerType === 'delivery' || partnerType === 'ride') &&
     nameValid &&
     !!city &&
     plateValid &&
@@ -348,7 +357,7 @@ export const OnboardingScreen: React.FC<Props> = ({
             onChange={(next) =>
               next === 'customer'
                 ? onUpdate({ accountType: 'customer', partnerType: '' })
-                : onUpdate({ accountType: 'partner', partnerType: partnerType || 'auto' })
+                : onUpdate({ accountType: 'partner', partnerType: partnerType || 'ride' })
             }
             options={[
               { value: 'customer', label: t('accountType.customer', { defaultValue: 'Customer' }) },
@@ -380,7 +389,7 @@ export const OnboardingScreen: React.FC<Props> = ({
                 onChange={(value) => onUpdate({ partnerType: value })}
                 options={[
                   {
-                    value: 'auto',
+                    value: 'ride',
                     icon: IconTaxi,
                     label: t('partnerType.ride', { defaultValue: 'Ride' }),
                   },

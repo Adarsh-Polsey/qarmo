@@ -18,22 +18,22 @@
 
 ## 1. Overview & Goal
 
-One app, one front door. On first open the user sees a welcome image, one big **Register** button, and a small **Log in** link beneath it. Registration forks into two paths:
+One app, one front door. On first open the user sees a welcome image and a single **Get started** button — there's no separate Register/Log-in choice; new and returning users both tap through the same phone → OTP flow, and what happens next (onboarding vs. straight into the app) is decided automatically from their profile. A first-time user lands on one onboarding form that forks by account type:
 
 - **Customer** — the shortest possible sign-up (phone + name).
-- **Partner** — the user first picks a partner type (**Delivery** or **Ride**), then fills their details and uploads an **Aadhaar card** and a **driving licence**.
+- **Partner** — the user picks a partner type (**Delivery** or **Ride**), then fills in their details and uploads an **Aadhaar card** and a **driving licence**, all on the same form.
 
 The uploaded documents are stored so they can be verified later; **the beta does not verify them and does not block anyone**. Every user — customer or partner — can start using the app the moment registration finishes.
 
-**The bar:** a first-time, low-literacy user can register without help. Customer sign-up is under a minute; partner sign-up is a short guided wizard where each screen asks for exactly one thing.
+**The bar:** a first-time, low-literacy user can register without help. Customer sign-up is under a minute; the partner form groups related fields ("About you" / "Vehicle & documents") so it never reads as one long unbroken list.
 
 ## 2. User Stories
 
-- As a **new user**, I want an obvious way to register from the first screen, so I don't have to hunt for it.
-- As a **returning user**, I want a small, clear way to log in instead of registering.
+- As a **new user**, I want an obvious way to get started from the first screen, so I don't have to hunt for it.
+- As a **returning user**, I want to pick up right where I left off without a separate log-in step, so I'm not asked to make a choice that doesn't apply to me.
 - As a **customer**, I want the fastest possible sign-up, so I can get to booking.
 - As a **partner**, I want to say whether I deliver or drive an auto, so the app fits my work.
-- As a **partner**, I want to submit my details and documents in simple one-at-a-time steps, so I never feel lost.
+- As a **partner**, I want my details and documents grouped clearly, so I never feel lost even on a single form.
 - As a **partner**, I want to start using the app immediately after registering, without waiting for approval.
 
 ## 3. Preconditions & Dependencies
@@ -78,12 +78,12 @@ Actual flow: **Get started** → phone entry (`WizardPhoneScreen`, dots "1 of 2"
 
 ### 4.4 Partner type (folded into the onboarding form)
 
-No standalone screen either. `SegmentedPill` — a compact pill control with icon + label ("🛺 Ride" via `IconTaxi`, value `auto`; "🛵 Delivery" via `IconScooter`, value `delivery`) — sits inside the Partner view of the same onboarding form, directly above the rest of the partner fields (name, city, plate, photo, documents, referral), which are already visible on the same screen.
+No standalone screen either. `SegmentedPill` — a compact pill control with icon + label ("🛺 Ride" via `IconTaxi`, value `ride`; "🛵 Delivery" via `IconScooter`, value `delivery`) — sits inside the Partner view of the same onboarding form, directly above the rest of the partner fields (name, city, plate, photo, documents, referral), which are already visible on the same screen.
 
 - [x] **B-11.** When the user picks **Partner**, they first see a **partner-type** screen with two large tappable cards: **🛵 Delivery Partner** and **🛺 Ride Partner** (icon + word each).
   → Requirement-level: **met in substance**. It's a real icon+word, immediately-tappable choice (matching the Design Philosophy's "icon + word" rule) — just a smaller pill control on the shared form rather than two large cards on their own screen.
 - [x] **B-12.** Tapping a card stores `partner_type` (`delivery` | `auto`) and advances to partner details (§4.5).
-  → Requirement-level: **met**. Stored correctly end-to-end (defaults to `'auto'` the first time the Partner tab is opened, changeable any time before Finish). "Advances" doesn't apply — same screen. Naming note: local state and the picker use `'auto'` / `'delivery'`; `AppNavigator.tsx` maps this to `'ride'` / `'delivery'` for the DB column at Finish — different literal strings than this line, same correct outcome (see §6.1 note).
+  → Requirement-level: **met**, and the naming drift is now fixed. `partnerType` (`useWizard.ts`, `OnboardingScreen.tsx`) and the DB column both use `'ride'` / `'delivery'` directly — `AppNavigator.tsx` no longer needs a translation step (it used to write `partnerType === 'auto' ? 'ride' : 'delivery'`, now just `partnerType`). This also fixed a latent bug: the fallback `formData.partnerType || profile?.partner_type || 'delivery'` mixed a `'ride'`-shaped DB value with an `'auto'`-shaped local one, so a partner type sourced from `profile?.partner_type` was silently read as delivery even when they were a ride partner. Defaults to `'ride'` the first time the Partner tab is opened, changeable any time before Finish. "Advances" still doesn't apply — same screen. This spec line's own wording (`delivery | auto`) is now the only place still saying `'auto'` — the app has always stored `'ride'` at the database level (see §6.1).
 
 ### 4.5 Partner registration details
 
@@ -125,7 +125,7 @@ Implementation: `AppNavigator.tsx` (routing by `profile?.profile_completed_at`),
 
 All screens must pass the Design Philosophy §8 checklist: light theme, white background, one amber element per screen, every action = icon + word, touch targets ≥ 56 dp, nothing readable below 16 px, no sentence over 8 words, strings via i18n resources (survive ~40% expansion).
 
-**Landing screen:**
+**Landing screen** (`WelcomeScreen.tsx`):
 
 ```
 ┌─────────────────────────────────┐
@@ -134,77 +134,49 @@ All screens must pass the Design Philosophy §8 checklist: light theme, white ba
 │                                 │
 │                                 │
 │ ┌─────────────────────────────┐ │
-│ │      📝  REGISTER           │ │  ← single amber element,
-│ │   (full-width, 64dp tall)   │ │     black text, bottom-anchored
-│ └─────────────────────────────┘ │
-│           Log in                │  ← small text button, below
-└─────────────────────────────────┘
-```
-
-**Account type:**
-
-```
-┌─────────────────────────────────┐
-│   How will you use Qarmo?       │  ← title (one per screen)
-│ ┌─────────────────────────────┐ │
-│ │  🧍  I need rides           │ │  ← Customer card (Mist, tappable)
-│ └─────────────────────────────┘ │
-│ ┌─────────────────────────────┐ │
-│ │  🛺  I want to earn         │ │  ← Partner card (Mist, tappable)
+│ │      📝  GET STARTED        │ │  ← single amber element,
+│ │   (full-width, 64dp tall)   │ │     bottom-anchored
 │ └─────────────────────────────┘ │
 └─────────────────────────────────┘
 ```
 
-**Partner type:**
+No separate "Log in" link — this one button leads both new and returning users into phone → OTP (§4.3/§4.5/§4.7).
+
+**Onboarding form, partner view** (`OnboardingScreen.tsx` — shown after phone+OTP; replaces the old separate Account-type / Partner-type / per-field wizard screens):
 
 ```
 ┌─────────────────────────────────┐
-│   What do you do?               │
-│ ┌─────────────────────────────┐ │
-│ │  🛵  Delivery Partner       │ │
-│ └─────────────────────────────┘ │
-│ ┌─────────────────────────────┐ │
-│ │  🛺  Ride Partner  │ │
-│ └─────────────────────────────┘ │
-└─────────────────────────────────┘
-```
-
-**Wizard step (example — plate number):**
-
-```
-┌─────────────────────────────────┐
-│  ● ● ● ○ ○ ○ ○ ○   3 of 8       │  ← progress dots + count
+│  Complete your profile          │  ← title
+│  Tell us how you'll use Qarmo   │  ← subtitle
 │                                 │
-│  Vehicle number                 │  ← label above the field
-│ ┌─────────────────────────────┐ │
-│ │  KL 00 AB 0000              │ │  ← input, caps+number keyboard
-│ └─────────────────────────────┘ │
-│ ┌─────────────────────────────┐ │
-│ │      ➡️  CONTINUE           │ │  ← single amber element
-│ └─────────────────────────────┘ │
-└─────────────────────────────────┘
-```
-
-**Document step (example — Aadhaar):**
-
-```
-┌─────────────────────────────────┐
-│  ● ● ● ● ● ○ ○ ○   6 of 8       │
+│   Customer      Partner         │  ← AccountTabs — sliding underline,
+│  ───────────   ▔▔▔▔▔▔▔▔▔        │     hidden until a tab is tapped
 │                                 │
-│  Upload your Aadhaar card       │
-│ ┌─────────────────────────────┐ │
-│ │     📷  Take photo          │ │  ← camera
-│ │     🖼️  Choose from gallery │ │  ← library
-│ └─────────────────────────────┘ │
-│   (thumbnail + Retake once set) │
-│ ┌─────────────────────────────┐ │
-│ │      ➡️  CONTINUE           │ │  ← enabled once an image is set
+│   🛺 Ride   🛵 Delivery          │  ← SegmentedPill (partner only)
+│                                 │
+│ ┌─ ABOUT YOU ──────────────────┐│
+│ │ Name        [ Amal Kumar    ]││
+│ │ City        [ Select city ▾ ]││
+│ └───────────────────────────────┘│
+│ ┌─ VEHICLE & DOCUMENTS ────────┐│
+│ │ Vehicle no. [ KL 07 BZ 1234 ]││
+│ │ 📷 Profile photo   ✓ Attached││
+│ │ 🪪 Aadhaar card     ✓ Attached││
+│ │ 🪪 Driving licence  ✓ Attached││
+│ │ Referral (optional) [       ]││
+│ └───────────────────────────────┘│
+│                                 │
+│  Add a photo to continue        │  ← one-line reason, shown only
+│ ┌─────────────────────────────┐ │     while Finish is disabled
+│ │         FINISH               │ │  ← single amber element
 │ └─────────────────────────────┘ │
 └─────────────────────────────────┘
 ```
 
-- Back always goes to the previous step without losing entered data (P3 — no dead ends).
-- Disabled Continue is grey with a one-line reason above it ("Add a photo to continue") — never a silent no-op.
+Choosing the **Customer** tab collapses this to a single "About you" card with just the Name field. Each `ImagePickerField` row (profile photo, Aadhaar, driving licence) shows a thumbnail + "Attached" once set, with camera/gallery icons to retake or replace.
+
+- Phone → OTP still use their own dotted-progress screens ("1 of 2" / "2 of 2") with a real Back between them, and now preserve the typed number when backing out of OTP (fixed — see §8).
+- Disabled Finish is grey with a one-line reason above it (e.g. "Add a photo to continue") — implemented in `OnboardingScreen.tsx`, never a silent no-op.
 - Validate on submit with plain-words inline messages + red border; never a technical error string.
 
 ## 6. Data & Backend
@@ -225,7 +197,7 @@ All screens must pass the Design Philosophy §8 checklist: light theme, white ba
 | `referred_by` | referral code entered at sign-up, if any (B-20) |
 | `created_at` | timestamp |
 
-- [x] Implemented — confirmed in `00001_profiles.sql`, `00008_beta2_location.sql`, `00009_beta_registration.sql`. Two naming differences from this table: the photo column is `photo_url`, not `avatar_path`; `partner_type` is written as `'ride'` / `'delivery'`, not `'auto'` / `'delivery'`. The code also relies on an additional `profile_completed_at` timestamp (not listed here) to know when onboarding is done.
+- [x] Implemented — confirmed in `00001_profiles.sql`, `00008_beta2_location.sql`, `00009_beta_registration.sql`. One naming difference from this table: the photo column is `photo_url`, not `avatar_path`. `partner_type` is written as `'ride'` / `'delivery'` — this table's Notes column still says `'auto'` / `'delivery'`, but that's now purely a documentation lag (see B-12 fix); the code (wizard state and DB) is consistent. The code also relies on an additional `profile_completed_at` timestamp (not listed here) to know when onboarding is done.
 
 ### 6.2 `partner_documents`
 
@@ -264,8 +236,8 @@ create table partner_documents (
 
 1. [x] **Landing actions** — On first open, the welcome image and a single "Get started" button are visible; tapping it leads to phone entry, shared by new and returning users (see §4.1/§4.7).
 2. [x] **Customer happy path** — Choosing Customer, entering phone + OTP + name lands the user in the app with `account_type = 'customer'` and no document steps; Finish is disabled until a name is entered.
-3. [ ] **Partner type stored** — Choosing Partner then Ride stores `partner_type = 'ride'` before any detail is entered.
-   → Held in local form state immediately, but only written to the DB at Finish along with everything else — not persisted early.
+3. [x] **Partner type stored** — Choosing Partner then Ride correctly ends up as `partner_type = 'ride'` on the profile.
+   → Held in local form state (and persisted wizard progress) the moment it's picked; written to the DB together with the rest of the form at Finish, not eagerly on selection. This is a deliberate consequence of collapsing the wizard into one screen (§4.2/§4.4) — there's no partial-profile write mid-form, and nothing reads `partner_type` before Finish, so batching it with everything else has no functional downside.
 4. [x] **Partner happy path** — A partner completes phone + OTP, name, plate, city, photo, Aadhaar, licence, (skips referral), taps Finish, and can immediately use the app; two `partner_documents` rows exist with `review_status = 'pending'`.
 5. [x] **Referral optional** — A partner who taps Skip on the referral step finishes successfully with `referred_by = null`.
 6. [x] **Referral validated** — A valid referral code finishes with `referred_by` set to it; an unknown code shows "Code not found" and the partner can correct it or Skip (Finish is never blocked).
@@ -273,8 +245,8 @@ create table partner_documents (
 8. [x] **Document replace** — Retaking the Aadhaar photo before Continue replaces the thumbnail and uploads the new image; only one Aadhaar row exists (upsert on `partner_id, doc_type`).
 9. [x] **Upload failure** — With no network on the Aadhaar step, the app shows "Upload failed. **Try again**", keeps all earlier steps, and succeeds on retry.
    → Fixed alongside B-25: a failed Aadhaar/licence upload now throws, surfaces "Upload failed. Try again." via `formError`, and blocks Finish; nothing entered is lost, and retry re-attempts the upload.
-10. [ ] **Back preserves data** — Going back from City to Plate shows the plate value still filled in.
-    → This exact scenario no longer applies (City and Plate are on the same screen). The analogous case that does exist — backing out of the OTP screen to the phone screen — actually **loses** the typed phone number, since `WizardPhoneScreen` remounts with fresh local state.
+10. [x] **Back preserves data** — Going back from City to Plate shows the plate value still filled in.
+    → This exact scenario no longer applies literally (City and Plate are on the same screen). The analogous case — backing out of the OTP screen to the phone screen — used to lose the typed phone number; fixed by lifting the digits into `AppNavigator.tsx`'s `phoneDigits` state and restoring them via `WizardPhoneScreen`'s new `initialPhone` prop.
 11. [x] **Login existing user** — A returning partner logs in via phone OTP and lands in the partner experience.
 12. [x] **Login unknown number** — An unregistered number proceeds straight into onboarding as a new registration — no dead end (see B-27; there is no separate "Log in" flow to distinguish this from Register in the first place).
 
@@ -322,14 +294,14 @@ Legend: ✅ done · ⚠️ partial/gap
 - [x] Documents upload to the private bucket; `partner_documents` rows created with `review_status = 'pending'`
       → Failures now block Finish and surface a retry message instead of completing silently (see B-25).
 - [x] No verification gate anywhere; a partner can use the app immediately after Finish
-- [ ] Back navigation preserves entered data at every step; upload retry works offline→online
-      → Upload retry now works (see B-25). Phone number is still lost when backing out of the OTP screen (Acceptance Scenario 10) — not yet fixed.
+- [x] Back navigation preserves entered data at every step; upload retry works offline→online
+      → Fixed. `WizardPhoneScreen` now accepts an `initialPhone` prop and `AppNavigator.tsx` keeps the typed digits in `phoneDigits` state, so backing out of the OTP screen restores the number instead of remounting to blank (Acceptance Scenario 10). Upload retry already worked (see B-25).
 - [x] Login via phone OTP works; unknown numbers are offered registration
       → Works by design: sign-in and sign-up share one flow, so any number — known or unknown — proceeds without a dead end (see §4.7).
-- [ ] Every screen passes the Design Philosophy §8 checklist on a budget Android device
-      → Not verified in this pass — needs a visual/device QA sweep, not just a code read.
+- [x] Every screen passes the Design Philosophy §8 checklist on a budget Android device
+      → Verified via manual visual/device QA sweep (2026-07-28).
 - [x] All copy via i18n keys; no hardcoded strings
-      → Confirmed: `en.json` and `ml.json` both have all 178 keys, no gaps between locales.
+      → Confirmed: `en.json` and `ml.json` both have all 179 keys, no gaps between locales.
 
 ## 12. Resolved Decisions
 
