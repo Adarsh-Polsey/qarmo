@@ -84,6 +84,32 @@ pnpm typecheck    # Type-check the workspace
 pnpm format       # Prettier across the repo
 ```
 
+## Building a release APK for a physical device
+
+This builds a self-contained release APK (JS bundle embedded, no Metro dev server needed at runtime) and installs it straight to a device connected over ADB — including over Wi-Fi debugging.
+
+```bash
+# 1. Point at the local Android SDK (one-time per shell session)
+export ANDROID_HOME=/Users/adx/Develop/android
+export ANDROID_SDK_ROOT=/Users/adx/Develop/android
+export PATH="$ANDROID_HOME/platform-tools:$PATH"
+
+# 2. Connect to the device (Settings → Developer options → Wireless debugging,
+#    use the IP:port shown there)
+adb connect <device-ip>:<port>
+
+# 3. Build + install
+cd apps/partner
+npx expo run:android --variant release --no-bundler
+```
+
+Notes:
+- `--variant release` produces a standalone APK — no attached dev server required, unlike the default debug variant.
+- `--no-bundler` skips starting a Metro server, since release doesn't need one.
+- With exactly one device connected, `expo run:android` auto-selects it — no `--device` flag needed (and its device-name matching doesn't accept a raw IP:port anyway).
+- If the device drops off Wi-Fi debugging mid-session, `adb connect` will time out — re-enable Wireless debugging on the phone and retry.
+- The first build after adding/removing a native dependency (e.g. the `@maplibre/maplibre-react-native` migration) needs a clean prebuild — delete `apps/partner/android` (gitignored, safe) before rerunning.
+
 ## Documentation
 
 Detailed product and technical specs live in [Documents/](Documents/):

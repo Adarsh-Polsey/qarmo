@@ -12,6 +12,7 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as Clipboard from 'expo-clipboard';
 import {
   theme,
   Text,
@@ -115,7 +116,10 @@ export const ProfileScreen: React.FC = () => {
   };
 
   const handleShareReferral = async () => {
-    if (!profile?.referral_code) return;
+    if (!profile?.referral_code) {
+      Alert.alert(t('dashboard.codeNotReady', { defaultValue: 'Your referral code is still being generated. Please try again in a moment.' }));
+      return;
+    }
     try {
       await Share.share({
         message: t('dashboard.shareMessage', {
@@ -124,7 +128,9 @@ export const ProfileScreen: React.FC = () => {
         }),
       });
     } catch (err) {
-      console.error('Error sharing code:', err);
+      console.error('Error sharing code, falling back to clipboard:', err);
+      await Clipboard.setStringAsync(profile.referral_code);
+      Alert.alert(t('dashboard.codeCopied', { defaultValue: 'Code copied' }));
     }
   };
 

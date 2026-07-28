@@ -58,7 +58,10 @@ export const DashboardScreen: React.FC<Props> = ({
   const [plateNumber, setPlateNumber] = useState<string>('');
 
   const handleShare = async () => {
-    if (!referralCode) return;
+    if (!referralCode) {
+      Alert.alert(t('dashboard.codeNotReady', { defaultValue: 'Your referral code is still being generated. Please try again in a moment.' }));
+      return;
+    }
     const message = t('dashboard.shareMessage', { code: referralCode, defaultValue: `Join Qarmo with my code ${referralCode}` });
     try {
       const result = await Share.share({ message });
