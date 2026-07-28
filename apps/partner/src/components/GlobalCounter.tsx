@@ -24,8 +24,9 @@ export const GlobalCounter: React.FC = () => {
       // 2. Table select query
       const { count: currentCount, error } = await supabase
         .from('profiles')
-        .select('*', { count: 'exact', head: true });
-      
+        .select('*', { count: 'exact', head: true })
+        .eq('account_type', 'partner');
+
       if (!error && currentCount !== null && currentCount > 0) {
         setCount(currentCount);
       } else {
@@ -41,8 +42,10 @@ export const GlobalCounter: React.FC = () => {
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'profiles' },
-        () => {
-          setCount((c) => Math.max(1, c + 1));
+        (payload) => {
+          if (payload.new && payload.new.account_type === 'partner') {
+            setCount((c) => Math.max(1, c + 1));
+          }
         }
       )
       .on(

@@ -7,8 +7,10 @@ import {
   TouchableOpacity,
   Image,
   Share,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as Clipboard from 'expo-clipboard';
 import { theme, Text, Card, getInitials, IconTaxi, IconScooter, IconStar, IconShareNetwork } from '@qarmo/ui';
 import { useTranslation } from '@qarmo/i18n';
 import { supabase } from '@qarmo/supabase';
@@ -57,12 +59,14 @@ export const DashboardScreen: React.FC<Props> = ({
 
   const handleShare = async () => {
     if (!referralCode) return;
+    const message = t('dashboard.shareMessage', { code: referralCode, defaultValue: `Join Qarmo with my code ${referralCode}` });
     try {
-      await Share.share({
-        message: t('dashboard.shareMessage', { code: referralCode, defaultValue: `Join Qarmo with my code ${referralCode}` }),
-      });
+      const result = await Share.share({ message });
+      if (result.action === Share.dismissedAction) return;
     } catch (err) {
-      console.error('Error sharing code:', err);
+      console.error('Error sharing code, falling back to clipboard:', err);
+      await Clipboard.setStringAsync(referralCode);
+      Alert.alert(t('dashboard.codeCopied', { defaultValue: 'Code copied' }));
     }
   };
 

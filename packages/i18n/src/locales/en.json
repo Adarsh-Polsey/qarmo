@@ -158,7 +158,8 @@
     "friendJoinedSingular": "1 friend joined",
     "friendsJoinedPlural": "{{count}} friends joined",
     "unknownCity": "Unknown City",
-    "shareMessage": "Join Qarmo with my code {{code}}"
+    "shareMessage": "Join Qarmo with my code {{code}}",
+    "codeCopied": "Code copied"
   },
   "profile": {
     "memberSince": "Member since {{date}}",

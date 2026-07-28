@@ -158,7 +158,8 @@
     "friendJoinedSingular": "1 സുഹൃത്ത് ജോയിൻ ചെയ്തു",
     "friendsJoinedPlural": "{{count}} സുഹൃത്തുക്കൾ ജോയിൻ ചെയ്തു",
     "unknownCity": "അജ്ഞാത നഗരം",
-    "shareMessage": "എന്റെ കോഡ് {{code}} ഉപയോഗിച്ച് ഖർമോയിൽ ചേരൂ"
+    "shareMessage": "എന്റെ കോഡ് {{code}} ഉപയോഗിച്ച് ഖർമോയിൽ ചേരൂ",
+    "codeCopied": "കോഡ് പകർത്തി"
   },
   "profile": {
     "memberSince": "അംഗമായ തീയതി: {{date}}",
