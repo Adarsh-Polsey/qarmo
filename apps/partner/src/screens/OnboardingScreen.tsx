@@ -177,10 +177,10 @@ function SegmentedPill<T extends string>({
             onPress={() => onChange(opt.value)}
             activeOpacity={0.8}
           >
-            <OptIcon size={16} color={active ? theme.colors.ink : theme.colors.mutedText} />
+            <OptIcon size={16} color={active ? theme.colors.primary : theme.colors.mutedText} />
             <Text
               variant="caption"
-              color={active ? theme.colors.ink : theme.colors.mutedText}
+              color={active ? theme.colors.primary : theme.colors.mutedText}
               style={styles.segLabel}
             >
               {opt.label}
@@ -369,7 +369,7 @@ export const OnboardingScreen: React.FC<Props> = ({
           {isCustomer && (
             <View style={styles.card}>
               <Text variant="caption" color={theme.colors.mutedText} style={styles.cardTitle}>
-                {t('onboarding.aboutYou', { defaultValue: 'About you' })}
+                {t('onboarding.fullName', { defaultValue: 'Full name' })}
               </Text>
               <Input
                 dense
@@ -401,11 +401,14 @@ export const OnboardingScreen: React.FC<Props> = ({
                 ]}
               />
 
-              {/* Card 1 — About you */}
-              <View style={styles.card}>
-                <Text variant="caption" color={theme.colors.mutedText} style={styles.cardTitle}>
-                  {t('onboarding.aboutYou', { defaultValue: 'About you' })}
-                </Text>
+              {/* Section — About you */}
+              <View style={styles.section}>
+                <View style={styles.sectionTitleRow}>
+                  <View style={styles.sectionAccent} />
+                  <Text variant="caption" color={theme.colors.mutedText} style={styles.sectionTitle}>
+                    {t('onboarding.aboutYou', { defaultValue: 'About you' })}
+                  </Text>
+                </View>
 
                 <Input
                   dense
@@ -433,11 +436,14 @@ export const OnboardingScreen: React.FC<Props> = ({
                 </TouchableOpacity>
               </View>
 
-              {/* Card 2 — Vehicle & documents */}
-              <View style={styles.card}>
-                <Text variant="caption" color={theme.colors.mutedText} style={styles.cardTitle}>
-                  {t('onboarding.vehicleDocs', { defaultValue: 'Vehicle & documents' })}
-                </Text>
+              {/* Section — Vehicle & documents */}
+              <View style={[styles.section, styles.sectionDivider]}>
+                <View style={styles.sectionTitleRow}>
+                  <View style={styles.sectionAccent} />
+                  <Text variant="caption" color={theme.colors.mutedText} style={styles.sectionTitle}>
+                    {t('onboarding.vehicleDocs', { defaultValue: 'Vehicle & documents' })}
+                  </Text>
+                </View>
 
                 <Text variant="caption" color={theme.colors.ink} style={styles.fieldLabel}>
                   {t('wizard.plateNumber', { defaultValue: 'Vehicle number' })}
@@ -624,7 +630,7 @@ const styles = StyleSheet.create({
     left: 0,
     height: 2,
     borderRadius: 1,
-    backgroundColor: theme.colors.ink,
+    backgroundColor: theme.colors.primary,
   },
   // Segmented pill (grey track, sliding white thumb with soft border)
   segTrack: {
@@ -673,6 +679,39 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.3,
     marginBottom: theme.spacing.sm,
+  },
+  // Partner form sections — no outer box; the fields carry their own border, and
+  // sections are separated by a very light grey rule instead of a bordered card.
+  section: {
+    marginBottom: theme.spacing.md,
+  },
+  sectionDivider: {
+    borderTopWidth: 6,
+    borderTopColor: theme.colors.surface,
+    paddingTop: theme.spacing.md,
+    marginTop: theme.spacing.xs,
+    marginHorizontal: -theme.spacing.lg,
+    paddingHorizontal: theme.spacing.lg,
+  },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: theme.spacing.sm,
+  },
+  sectionAccent: {
+    width: 3,
+    height: 12,
+    borderRadius: 2,
+    backgroundColor: theme.colors.primary,
+    marginRight: theme.spacing.xs,
+  },
+  sectionTitle: {
+    fontFamily: theme.fonts.medium,
+    fontWeight: '500',
+    fontSize: 11,
+    lineHeight: 14,
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
   },
   fieldLabel: {
     fontFamily: theme.fonts.medium,

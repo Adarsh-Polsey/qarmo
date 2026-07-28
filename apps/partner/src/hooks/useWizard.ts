@@ -19,7 +19,7 @@ export interface WizardData {
 }
 
 const initialData: WizardData = {
-  accountType: '',
+  accountType: 'customer',
   partnerType: '',
   fullName: '',
   plateNumber: '',
