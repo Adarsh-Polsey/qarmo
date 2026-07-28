@@ -15,22 +15,15 @@ import { useAuth } from '../hooks/useAuth';
 import { useWizard } from '../hooks/useWizard';
 import { supabase } from '@qarmo/supabase';
 
-// Screens — Auth
-import { LandingScreen } from '../screens/LandingScreen';
+// Screens — Auth entry
+import { WelcomeScreen } from '../screens/WelcomeScreen';
 
-// Screens — Pre-auth selection
-import { AccountTypeScreen } from '../screens/AccountTypeScreen';
-import { PartnerTypeScreen } from '../screens/PartnerTypeScreen';
-
-// Screens — Wizard (phone/OTP inside wizard)
+// Screens — Phone/OTP verification
 import { WizardPhoneScreen } from '../screens/WizardPhoneScreen';
 import { WizardOTPScreen } from '../screens/WizardOTPScreen';
-import { WizardNameScreen } from '../screens/WizardNameScreen';
-import { WizardPlateScreen } from '../screens/WizardPlateScreen';
-import { WizardCityScreen } from '../screens/WizardCityScreen';
-import { WizardPhotoScreen } from '../screens/WizardPhotoScreen';
-import { WizardDocumentScreen } from '../screens/WizardDocumentScreen';
-import { WizardReferralScreen } from '../screens/WizardReferralScreen';
+
+// Screens — Onboarding (new users, single dynamic screen)
+import { OnboardingScreen } from '../screens/OnboardingScreen';
 
 // Screens — App
 import { DashboardScreen } from '../screens/DashboardScreen';
@@ -46,50 +39,24 @@ import { logger } from '../utils/logger';
 
 const TAG = 'Wizard';
 
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Flow types
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Pre-auth screens (unauthenticated)
- *  landing       → Landing page
- *  accountType   → Customer / Partner pick
- *  partnerType   → Delivery / Ride pick (partner only)
- *  phone         → Phone number entry (inside wizard)
- *  otp           → OTP verification (inside wizard)
+ * Pre-auth screens (unauthenticated):
+ *  welcome → single entry page (image + Get started)
+ *  phone   → phone number entry
+ *  otp     → OTP verification
+ *
+ * There is no Register/Login split — everyone follows welcome → phone → otp.
+ * After OTP the user is authenticated and routing is decided purely by
+ * profile.profile_completed_at: incomplete → OnboardingScreen, complete → app.
  */
-type PreAuthScreen = 'landing' | 'accountType' | 'partnerType' | 'phone' | 'otp';
+type PreAuthScreen = 'welcome' | 'phone' | 'otp';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Step definitions
-// ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * Customer wizard steps (after OTP):
- *   1 → name (finish)
- * Total rendered steps in dots: phone=1, otp=2, name=3
- */
-const CUSTOMER_TOTAL_STEPS = 3;
-
-/**
- * Partner wizard steps (after OTP):
- *   1 → name, 2 → plate, 3 → city, 4 → photo, 5 → aadhaar, 6 → licence, 7 → referral
- * Total rendered steps in dots: phone=1, otp=2, then partner steps 3–9
- */
-const PARTNER_POST_OTP_STEPS = 7;
-const PARTNER_TOTAL_STEPS = 2 + PARTNER_POST_OTP_STEPS; // = 9
-
-// partner post-OTP step numbers (1-indexed within post-OTP range)
-enum PartnerStep {
-  Name = 1,
-  Plate = 2,
-  City = 3,
-  Photo = 4,
-  Aadhaar = 5,
-  DrivingLicence = 6,
-  Referral = 7,
-}
+// Phone + OTP render a 2-step progress; new users then get the onboarding screen.
+const AUTH_TOTAL_STEPS = 2;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // AppNavigator
@@ -100,8 +67,6 @@ export const AppNavigator: React.FC = () => {
   const { user, profile, loading, isCheckingProfile, profileFetchError, signOut, refreshProfile } = useAuth();
 
   const {
-    step,
-    setStep,
     formData,
     updateFormData,
     resetWizard,
@@ -111,31 +76,28 @@ export const AppNavigator: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'home' | 'tab2' | 'profile'>('home');
 
   // Pre-auth navigation state
-  const [preAuthScreen, setPreAuthScreen] = useState<PreAuthScreen>('landing');
+  const [preAuthScreen, setPreAuthScreen] = useState<PreAuthScreen>('welcome');
   // Phone formatted for OTP (e.g. "+919876543210")
   const [otpPhone, setOtpPhone] = useState('');
-  // Whether user came through "Log in" (vs "Register")
-  const [isLoginMode, setIsLoginMode] = useState(false);
 
   // These are local UI state, not auth state — signOut() (in useAuth) has no way to
   // reset them itself. Without this, signing out leaves preAuthScreen wherever it was
   // last (e.g. 'otp'), so the very next unauthenticated render reuses that stale value
-  // instead of starting over from Landing. resetWizard() is included too: signOut()
-  // already clears the *persisted* wizard progress, but the in-memory formData/step
-  // here would otherwise still hold the previous account's name/photo/etc. if someone
+  // instead of starting over from Welcome. resetWizard() is included too: signOut()
+  // already clears the *persisted* wizard progress, but the in-memory formData here
+  // would otherwise still hold the previous account's name/photo/etc. if someone
   // registers a different account right after logging out.
   useEffect(() => {
     if (user) return;
-    setPreAuthScreen('landing');
+    setPreAuthScreen('welcome');
     setOtpPhone('');
-    setIsLoginMode(false);
     setActiveTab('home');
     resetWizard();
   }, [user, resetWizard]);
 
   const { locationError } = usePartnerLocation();
 
-  // Going back from the first wizard step would otherwise silently sign the user out
+  // Going back from onboarding would otherwise silently sign the user out
   // (they're already OTP-authenticated) — confirm first instead of discarding the session.
   const confirmDiscardAndSignOut = useCallback(() => {
     const title = t('wizard.discardConfirmTitle', { defaultValue: 'Sign out?' });
@@ -157,8 +119,8 @@ export const AppNavigator: React.FC = () => {
   }, [t, signOut]);
 
   // ───── Android hardware back button ────────────────────────────────────────
-  // Mirrors each screen's own onBack/onOtpSent wiring so the hardware back button
-  // behaves the same as tapping the on-screen back/cancel action.
+  // Mirrors each screen's own onBack wiring so the hardware back button behaves
+  // the same as tapping the on-screen back/cancel action.
   const handleHardwareBack = useCallback((): boolean => {
     // Main app (tabs) — profile complete
     if (user && profile?.profile_completed_at) {
@@ -169,62 +131,20 @@ export const AppNavigator: React.FC = () => {
       return false; // on Home tab — let the OS handle it (minimize/exit)
     }
 
-    // Post-OTP wizard steps
+    // Post-OTP — single onboarding screen. Back here discards the (already
+    // authenticated) session, so confirm before signing out.
     if (user && !profile?.profile_completed_at) {
-      const isCustomer = formData.accountType === 'customer' ||
-        (profile?.account_type === 'customer' && formData.accountType === '');
-
-      if (isCustomer) {
-        confirmDiscardAndSignOut();
-        return true;
-      }
-
-      switch (step) {
-        case PartnerStep.Name:
-          confirmDiscardAndSignOut();
-          return true;
-        case PartnerStep.Plate:
-          setStep(PartnerStep.Name);
-          return true;
-        case PartnerStep.City:
-          setStep(PartnerStep.Plate);
-          return true;
-        case PartnerStep.Photo:
-          setStep(PartnerStep.City);
-          return true;
-        case PartnerStep.Aadhaar:
-          setStep(PartnerStep.Photo);
-          return true;
-        case PartnerStep.DrivingLicence:
-          setStep(PartnerStep.Aadhaar);
-          return true;
-        case PartnerStep.Referral:
-          setStep(PartnerStep.DrivingLicence);
-          return true;
-        default:
-          return false;
-      }
+      confirmDiscardAndSignOut();
+      return true;
     }
 
     // Pre-auth flow
     if (!user) {
       switch (preAuthScreen) {
-        case 'landing':
+        case 'welcome':
           return false; // let the OS handle it (exit app)
-        case 'accountType':
-          setPreAuthScreen('landing');
-          return true;
-        case 'partnerType':
-          setPreAuthScreen('accountType');
-          return true;
         case 'phone':
-          if (isLoginMode) {
-            setPreAuthScreen('landing');
-          } else if (formData.accountType === 'partner') {
-            setPreAuthScreen('partnerType');
-          } else {
-            setPreAuthScreen('accountType');
-          }
+          setPreAuthScreen('welcome');
           return true;
         case 'otp':
           setPreAuthScreen('phone');
@@ -235,7 +155,7 @@ export const AppNavigator: React.FC = () => {
     }
 
     return false;
-  }, [user, profile, activeTab, step, preAuthScreen, formData, isLoginMode, confirmDiscardAndSignOut, setStep]);
+  }, [user, profile, activeTab, preAuthScreen, confirmDiscardAndSignOut]);
 
   useEffect(() => {
     if (Platform.OS !== 'android') return;
@@ -244,7 +164,7 @@ export const AppNavigator: React.FC = () => {
   }, [handleHardwareBack]);
 
   // ───── Web browser back/forward ────────────────────────────────────────────
-  // The URL doesn't reflect the current screen (refresh still lands on Landing) —
+  // The URL doesn't reflect the current screen (refresh still lands on Welcome) —
   // this only makes the browser's back/forward buttons step through screens the
   // same way the Android hardware back button does above, by pushing a history
   // entry whenever the visible screen changes and replaying handleHardwareBack on
@@ -252,7 +172,7 @@ export const AppNavigator: React.FC = () => {
   const currentScreenKey = !user
     ? `preauth:${preAuthScreen}`
     : !profile?.profile_completed_at
-    ? `wizard:${step}`
+    ? 'onboarding'
     : `tab:${activeTab}`;
 
   const isHandlingPopRef = useRef(false);
@@ -303,7 +223,7 @@ export const AppNavigator: React.FC = () => {
   // ───── Error loading profile ───────────────────────────────────────────────
   // Note: a null profile with no fetch error means the row simply doesn't exist yet
   // (e.g. right after signup, before the DB trigger creates it) — that falls through
-  // to the wizard below rather than showing a hard error.
+  // to the onboarding screen below rather than showing a hard error.
 
   if (user && !profile && profileFetchError) {
     return (
@@ -330,102 +250,39 @@ export const AppNavigator: React.FC = () => {
   // ───── Not logged in — pre-auth flow ──────────────────────────────────────
 
   if (!user) {
-    // Landing
-    if (preAuthScreen === 'landing') {
-      return (
-        <LandingScreen
-          onRegister={() => {
-            setIsLoginMode(false);
-            setPreAuthScreen('accountType');
-          }}
-          onLogin={() => {
-            setIsLoginMode(true);
-            // Login goes straight to phone entry
-            updateFormData({ accountType: '' }); // clear, will be set after OTP from profile
-            setPreAuthScreen('phone');
-          }}
-        />
-      );
+    // Welcome — single entry point (no Register/Login split)
+    if (preAuthScreen === 'welcome') {
+      return <WelcomeScreen onContinue={() => setPreAuthScreen('phone')} />;
     }
 
-    // Account type selection (Register path only)
-    if (preAuthScreen === 'accountType') {
-      return (
-        <AccountTypeScreen
-          onSelectCustomer={() => {
-            updateFormData({ accountType: 'customer', partnerType: '' });
-            setPreAuthScreen('phone');
-          }}
-          onSelectPartner={() => {
-            updateFormData({ accountType: 'partner' });
-            setPreAuthScreen('partnerType');
-          }}
-        />
-      );
-    }
-
-    // Partner type selection
-    if (preAuthScreen === 'partnerType') {
-      return (
-        <PartnerTypeScreen
-          onSelectDelivery={() => {
-            updateFormData({ partnerType: 'delivery' });
-            setPreAuthScreen('phone');
-          }}
-          onSelectRide={() => {
-            updateFormData({ partnerType: 'auto' });
-            setPreAuthScreen('phone');
-          }}
-          onBack={() => setPreAuthScreen('accountType')}
-        />
-      );
-    }
-
-    // Phone entry (inside wizard)
+    // Phone entry
     if (preAuthScreen === 'phone') {
-      const isCustomer = formData.accountType === 'customer';
-      const currentStep = 1;
-      const totalSteps = isLoginMode ? 2 : (isCustomer ? CUSTOMER_TOTAL_STEPS : PARTNER_TOTAL_STEPS);
-
       return (
         <WizardPhoneScreen
-          currentStep={currentStep}
-          totalSteps={totalSteps}
+          currentStep={1}
+          totalSteps={AUTH_TOTAL_STEPS}
           onOtpSent={(formattedPhone) => {
             setOtpPhone(formattedPhone);
             setPreAuthScreen('otp');
           }}
-          onBack={() => {
-            if (isLoginMode) {
-              setPreAuthScreen('landing');
-            } else if (formData.accountType === 'partner') {
-              setPreAuthScreen('partnerType');
-            } else {
-              setPreAuthScreen('accountType');
-            }
-          }}
+          onBack={() => setPreAuthScreen('welcome')}
         />
       );
     }
 
-    // OTP entry (inside wizard)
+    // OTP verification
     if (preAuthScreen === 'otp') {
-      const isCustomer = formData.accountType === 'customer';
-      const currentStep = 2;
-      const totalSteps = isLoginMode ? 2 : (isCustomer ? CUSTOMER_TOTAL_STEPS : PARTNER_TOTAL_STEPS);
-
       return (
         <WizardOTPScreen
           phone={otpPhone}
-          currentStep={currentStep}
-          totalSteps={totalSteps}
+          currentStep={2}
+          totalSteps={AUTH_TOTAL_STEPS}
           onVerified={() => {
-            // No explicit step transition here: verifyOTP() (awaited inside WizardOTPScreen
+            // No explicit transition here: verifyOTP() (awaited inside WizardOTPScreen
             // before this fires) already updated `user`/`profile`, which re-renders this
-            // component into the post-OTP branch below. useWizard's own load effect then
-            // either keeps the default step 1 (brand-new signup) or restores whatever step
-            // was persisted for this user (e.g. a login resuming an incomplete registration).
-            // Forcing setStep(1) here raced that restore and could clobber resumed progress.
+            // component into the onboarding or app branch below depending on
+            // profile_completed_at. A brand-new signup lands on onboarding; a returning
+            // user with a completed profile lands straight on the app.
           }}
           onBack={() => setPreAuthScreen('phone')}
         />
@@ -435,67 +292,41 @@ export const AppNavigator: React.FC = () => {
     return null;
   }
 
-  // ───── Logged in, profile incomplete — wizard steps (post-OTP) ───────────
+  // ───── Logged in, profile incomplete — onboarding (new users only) ─────────
 
   if (!profile?.profile_completed_at) {
-    const isCustomer = formData.accountType === 'customer' ||
-      (profile?.account_type === 'customer' && formData.accountType === '');
+    const handleCustomerFinish = async () => {
+      if (!user) return;
+      const done = logger.time(TAG, 'handleCustomerFinish');
+      try {
+        let { error } = await supabase.from('profiles').update({
+          full_name: formData.fullName,
+          account_type: 'customer',
+          profile_completed_at: new Date().toISOString(),
+        }).eq('id', user.id);
 
-    // ── Customer wizard: step 1 → Name ──────────────────────────────────────
-    if (isCustomer) {
-      // step 1 = name (= step 3 in total dots: 1=phone, 2=otp, 3=name)
-      const dotStep = 3;
-      const totalDots = CUSTOMER_TOTAL_STEPS;
-
-      const handleCustomerFinish = async () => {
-        if (!user) return;
-        const done = logger.time(TAG, 'handleCustomerFinish');
-        try {
-          let { error } = await supabase.from('profiles').update({
+        // Fallback if account_type column does not exist on Supabase DB schema yet
+        if (error && (error.code === 'PGRST204' || error.message?.includes('account_type'))) {
+          logger.warn(TAG, 'Direct update missing account_type column — retrying without it', { code: error.code });
+          const fallbackRes = await supabase.from('profiles').update({
             full_name: formData.fullName,
-            account_type: 'customer',
             profile_completed_at: new Date().toISOString(),
           }).eq('id', user.id);
-
-          // Fallback if account_type column does not exist on Supabase DB schema yet
-          if (error && (error.code === 'PGRST204' || error.message?.includes('account_type'))) {
-            logger.warn(TAG, 'Direct update missing account_type column — retrying without it', { code: error.code });
-            const fallbackRes = await supabase.from('profiles').update({
-              full_name: formData.fullName,
-              profile_completed_at: new Date().toISOString(),
-            }).eq('id', user.id);
-            error = fallbackRes.error;
-          }
-
-          if (error) throw error;
-          done('ok');
-          await resetWizard();
-          await refreshProfile();
-        } catch (err: any) {
-          console.error('Customer finish error:', err);
-          done('fail', { message: err?.message });
-          Alert.alert(
-            t('common.error', { defaultValue: 'Error' }),
-            err.message || t('wizard.errors.completionFailed', { defaultValue: 'Failed to complete profile.' }),
-          );
+          error = fallbackRes.error;
         }
-      };
 
-      return (
-        <WizardNameScreen
-          formData={formData}
-          onUpdate={updateFormData}
-          onNext={handleCustomerFinish}
-          onBack={confirmDiscardAndSignOut}
-          currentStep={dotStep}
-          totalSteps={totalDots}
-          actionLabel={t('wizard.finish', { defaultValue: 'Finish' })}
-        />
-      );
-    }
-
-    // ── Partner wizard: steps 1–7 (post-OTP) ────────────────────────────────
-    const dotOffset = 2; // phone=1, otp=2 already counted
+        if (error) throw error;
+        done('ok');
+        await resetWizard();
+        await refreshProfile();
+      } catch (err: any) {
+        console.error('Customer finish error:', err);
+        done('fail', { message: err?.message });
+        // Rethrow so OnboardingScreen clears its submitting state and surfaces the
+        // error inline (the partner path already resolves on its own internal warnings).
+        throw err;
+      }
+    };
 
     const handlePartnerSubmit = async (validReferralCode: string | null) => {
       if (!user) return;
@@ -703,105 +534,15 @@ export const AppNavigator: React.FC = () => {
       await refreshProfile();
     };
 
-    switch (step) {
-      case PartnerStep.Name:
-        return (
-          <WizardNameScreen
-            formData={formData}
-            onUpdate={updateFormData}
-            onNext={() => setStep(PartnerStep.Plate)}
-            onBack={confirmDiscardAndSignOut}
-            currentStep={dotOffset + PartnerStep.Name}
-            totalSteps={PARTNER_TOTAL_STEPS}
-          />
-        );
-
-      case PartnerStep.Plate:
-        return (
-          <WizardPlateScreen
-            formData={formData}
-            onUpdate={updateFormData}
-            onNext={() => setStep(PartnerStep.City)}
-            onBack={() => setStep(PartnerStep.Name)}
-            currentStep={dotOffset + PartnerStep.Plate}
-            totalSteps={PARTNER_TOTAL_STEPS}
-          />
-        );
-
-      case PartnerStep.City:
-        return (
-          <WizardCityScreen
-            formData={formData}
-            onUpdate={updateFormData}
-            onNext={() => setStep(PartnerStep.Photo)}
-            onBack={() => setStep(PartnerStep.Plate)}
-            currentStep={dotOffset + PartnerStep.City}
-            totalSteps={PARTNER_TOTAL_STEPS}
-          />
-        );
-
-      case PartnerStep.Photo:
-        return (
-          <WizardPhotoScreen
-            formData={formData}
-            onUpdate={updateFormData}
-            onNext={() => setStep(PartnerStep.Aadhaar)}
-            onBack={() => setStep(PartnerStep.City)}
-            currentStep={dotOffset + PartnerStep.Photo}
-            totalSteps={PARTNER_TOTAL_STEPS}
-          />
-        );
-
-      case PartnerStep.Aadhaar:
-        return (
-          <WizardDocumentScreen
-            key="aadhaar"
-            docType="aadhaar"
-            fieldKey="aadhaarUri"
-            formData={formData}
-            onUpdate={updateFormData}
-            onNext={() => setStep(PartnerStep.DrivingLicence)}
-            onBack={() => setStep(PartnerStep.Photo)}
-            currentStep={dotOffset + PartnerStep.Aadhaar}
-            totalSteps={PARTNER_TOTAL_STEPS}
-          />
-        );
-
-      case PartnerStep.DrivingLicence:
-        return (
-          <WizardDocumentScreen
-            key="driving_licence"
-            docType="driving_licence"
-            fieldKey="drivingLicenceUri"
-            formData={formData}
-            onUpdate={updateFormData}
-            onNext={() => setStep(PartnerStep.Referral)}
-            onBack={() => setStep(PartnerStep.Aadhaar)}
-            currentStep={dotOffset + PartnerStep.DrivingLicence}
-            totalSteps={PARTNER_TOTAL_STEPS}
-          />
-        );
-
-      case PartnerStep.Referral:
-        return (
-          <WizardReferralScreen
-            userId={user.id}
-            formData={formData}
-            onUpdate={updateFormData}
-            onSubmit={handlePartnerSubmit}
-            onBack={() => setStep(PartnerStep.DrivingLicence)}
-            currentStep={dotOffset + PartnerStep.Referral}
-            totalSteps={PARTNER_TOTAL_STEPS}
-          />
-        );
-
-      default:
-        return (
-          <SafeAreaView style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={theme.colors.primary} />
-          </SafeAreaView>
-        );
-    }
+    return (
+      <OnboardingScreen
+        formData={formData}
+        onUpdate={updateFormData}
+        onSubmitCustomer={handleCustomerFinish}
+        onSubmitPartner={handlePartnerSubmit}
+        onExit={confirmDiscardAndSignOut}
+      />
+    );
   }
 
   // ───── Logged in + profile complete — main app ────────────────────────────
