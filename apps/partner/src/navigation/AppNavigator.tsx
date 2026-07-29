@@ -499,7 +499,11 @@ export const AppNavigator: React.FC = () => {
           console.warn('complete-profile function warning:', message);
           doneEdgeFn('fail', { message });
         } else {
-          doneEdgeFn('ok', { referralCode: (funcData as any)?.referral_code ?? null });
+          doneEdgeFn('ok', {
+            success: (funcData as any)?.success ?? null,
+            referralCode: (funcData as any)?.referral_code ?? null,
+            response: funcData,
+          });
         }
       } catch (funcErr: any) {
         console.warn('Edge function invoke exception:', funcErr.message);
@@ -545,7 +549,23 @@ export const AppNavigator: React.FC = () => {
 
       logger.info(TAG, 'handlePartnerSubmit — finished, resetting wizard');
       await resetWizard();
-      await refreshProfile();
+
+      // Read the profile back from the DB to confirm completeProfile actually
+      // landed — profile_completed_at present is what flips onboarding → dashboard,
+      // and referral_code present proves the edge-function RPC generated a code.
+      const finalProfile = await refreshProfile();
+      logger.info(TAG, 'handlePartnerSubmit — verification', {
+        profileCompleted: !!finalProfile?.profile_completed_at,
+        completedAt: finalProfile?.profile_completed_at ?? null,
+        hasReferralCode: !!finalProfile?.referral_code,
+        referralCode: finalProfile?.referral_code ?? null,
+        accountType: finalProfile?.account_type ?? null,
+      });
+      if (!finalProfile?.profile_completed_at) {
+        logger.warn(TAG, 'handlePartnerSubmit — completeProfile did NOT persist profile_completed_at', {
+          userId: user.id,
+        });
+      }
     };
 
     return (

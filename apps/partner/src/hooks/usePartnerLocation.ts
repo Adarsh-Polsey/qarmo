@@ -11,9 +11,18 @@ export const usePartnerLocation = () => {
   const { profile } = useAuth();
   const [locationError, setLocationError] = useState(false);
 
+  // Depend on the stable primitive fields, not the profile object itself.
+  // setProfile() runs on every auth revalidation (INITIAL_SESSION, TOKEN_REFRESHED,
+  // profile re-fetch), each time producing a new object reference with identical data.
+  // Keying the effect on the object caused it to tear down and re-fire captureLocation()
+  // on every one of those, stacking dozens of overlapping 15-30s location reads.
+  const partnerId = profile?.id;
+  const accountType = profile?.account_type;
+  const profileCompletedAt = profile?.profile_completed_at;
+
   useEffect(() => {
     // Only capture location if user is a partner and profile is complete
-    if (!profile || profile.account_type !== 'partner' || !profile.profile_completed_at) return;
+    if (!partnerId || accountType !== 'partner' || !profileCompletedAt) return;
 
     const captureLocation = async () => {
       const done = logger.time(TAG, 'captureLocation');
@@ -26,13 +35,19 @@ export const usePartnerLocation = () => {
         }
 
         setLocationError(false);
-        const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+        // Prefer a recent cached fix over a fresh GPS lock — a cold Balanced read was
+        // taking 15-30s. A partner's position for the map doesn't need sub-minute
+        // freshness, so accept any cached fix up to 1 min old and only fall back to a
+        // fresh read when the cache is empty/stale.
+        const loc =
+          (await Location.getLastKnownPositionAsync({ maxAge: 60000 })) ??
+          (await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }));
 
         // Write to profiles.last_location via direct update
         const { error } = await supabase.from('profiles').update({
           last_location: `POINT(${loc.coords.longitude} ${loc.coords.latitude})`,
           location_updated_at: new Date().toISOString(),
-        }).eq('id', profile.id);
+        }).eq('id', partnerId);
 
         if (error) {
           // Previously unchecked — a failed write here looked identical to a
@@ -66,7 +81,7 @@ export const usePartnerLocation = () => {
     return () => {
       subscription.remove();
     };
-  }, [profile]);
+  }, [partnerId, accountType, profileCompletedAt]);
 
   return { locationError };
 };
