@@ -53,7 +53,11 @@ export const CustomerMapScreen: React.FC = () => {
           return;
         }
 
-        const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+        // Show the map immediately from a recent cached fix instead of blocking the
+        // whole screen behind a cold GPS lock (a fresh Balanced read takes 15-30s).
+        // Only fall back to a fresh read when there's nothing cached.
+        const cached = await Location.getLastKnownPositionAsync({ maxAge: 60000 });
+        const loc = cached ?? (await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }));
         setInitialCenter([loc.coords.longitude, loc.coords.latitude]);
         setInitialZoom(GPS_ZOOM);
       } catch (err) {
@@ -154,17 +158,35 @@ export const CustomerMapScreen: React.FC = () => {
 
         {!locationDenied && <UserLocation />}
 
-        {partners.map((p) => (
-          <ViewAnnotation key={p.id} id={p.id} lngLat={[p.lng, p.lat]}>
-            <View style={styles.markerContainer}>
-              {p.partner_type === 'delivery' ? (
-                <IconScooter size={18} color={theme.colors.ink} />
-              ) : (
-                <IconTaxi size={18} color={theme.colors.ink} />
-              )}
-            </View>
-          </ViewAnnotation>
-        ))}
+        {partners.map((p) => {
+          // Color-code so ride vs delivery is distinguishable at a glance (both were
+          // ink before): amber for ride/auto, green for delivery — both distinct from
+          // the blue user-location puck. The circle keeps its soft-grey border; type
+          // is conveyed by the icon color and the label tag below it.
+          const isDelivery = p.partner_type === 'delivery';
+          const typeColor = isDelivery ? theme.colors.success : theme.colors.primary;
+          const label = isDelivery
+            ? t('map.tagDelivery', { defaultValue: 'Delivery' })
+            : t('map.tagRide', { defaultValue: 'Ride' });
+          return (
+            <ViewAnnotation key={p.id} id={p.id} lngLat={[p.lng, p.lat]}>
+              <View style={styles.markerWrapper}>
+                <View style={styles.markerContainer}>
+                  {isDelivery ? (
+                    <IconScooter size={18} color={typeColor} />
+                  ) : (
+                    <IconTaxi size={18} color={typeColor} />
+                  )}
+                </View>
+                <View style={styles.markerTag}>
+                  <Text variant="caption" style={[styles.markerTagText, { color: typeColor }]}>
+                    {label}
+                  </Text>
+                </View>
+              </View>
+            </ViewAnnotation>
+          );
+        })}
       </Map>
 
       {showZoomHint && (
@@ -210,6 +232,11 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.medium,
     fontWeight: '500',
   },
+  markerWrapper: {
+    // Column so the type tag sits under the circle; the geo point lands at the
+    // circle's base, which reads like the marker "standing" on the location.
+    alignItems: 'center',
+  },
   markerContainer: {
     width: 32,
     height: 32,
@@ -219,6 +246,21 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.background,
     borderWidth: 1,
     borderColor: theme.colors.border,
+  },
+  markerTag: {
+    marginTop: 3,
+    backgroundColor: theme.colors.background,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+  },
+  markerTagText: {
+    fontFamily: theme.fonts.medium,
+    fontWeight: '500',
+    fontSize: 10,
+    lineHeight: 14,
   },
   hintContainer: {
     position: 'absolute',

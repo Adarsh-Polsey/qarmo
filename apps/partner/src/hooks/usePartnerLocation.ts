@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import * as Location from 'expo-location';
 import { AppState, AppStateStatus } from 'react-native';
 import { supabase } from '@qarmo/supabase';
@@ -6,6 +6,10 @@ import { useAuth } from './useAuth';
 import { logger } from '../utils/logger';
 
 const TAG = 'Location';
+
+// A partner's position for the map doesn't need sub-minute freshness — don't
+// capture more than once per this window regardless of what triggers it.
+const MIN_CAPTURE_INTERVAL_MS = 30_000;
 
 export const usePartnerLocation = () => {
   const { profile } = useAuth();
@@ -20,11 +24,25 @@ export const usePartnerLocation = () => {
   const accountType = profile?.account_type;
   const profileCompletedAt = profile?.profile_completed_at;
 
+  // Refs persist across re-renders so these guards survive without re-running the effect.
+  const appStateRef = useRef<AppStateStatus>(AppState.currentState);
+  const isCapturingRef = useRef(false);
+  const lastCaptureAtRef = useRef(0);
+
   useEffect(() => {
     // Only capture location if user is a partner and profile is complete
     if (!partnerId || accountType !== 'partner' || !profileCompletedAt) return;
 
     const captureLocation = async () => {
+      // Overlap + rate guards. AppState can emit 'active' rapidly (window-focus
+      // churn, dev overlay, emulator), which previously fired captureLocation back
+      // to back — dozens per second. Skip if one is already in flight or if we
+      // captured within the throttle window.
+      if (isCapturingRef.current) return;
+      if (Date.now() - lastCaptureAtRef.current < MIN_CAPTURE_INTERVAL_MS) return;
+      isCapturingRef.current = true;
+      lastCaptureAtRef.current = Date.now();
+
       const done = logger.time(TAG, 'captureLocation');
       try {
         const { status } = await Location.requestForegroundPermissionsAsync();
@@ -63,15 +81,21 @@ export const usePartnerLocation = () => {
         console.warn('Location capture error:', e);
         setLocationError(true);
         done('fail', { message: e?.message });
+      } finally {
+        isCapturingRef.current = false;
       }
     };
 
     // Capture on cold start
     captureLocation();
 
-    // Capture on foreground
+    // Capture only on a real background/inactive -> active transition — not on
+    // every 'active' event. AppState emits 'active' on transient focus changes
+    // while already foregrounded; firing on those spammed captureLocation.
     const handleAppStateChange = (nextAppState: AppStateStatus) => {
-      if (nextAppState === 'active') {
+      const cameFromBackground = /inactive|background/.test(appStateRef.current);
+      appStateRef.current = nextAppState;
+      if (cameFromBackground && nextAppState === 'active') {
         captureLocation();
       }
     };
