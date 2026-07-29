@@ -14,7 +14,7 @@
     "android": {
       "package": "com.qarmo.partner",
       "adaptiveIcon": {
-        "backgroundColor": "#FFFFFF",
+        "backgroundColor": "#000000",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -23,6 +23,16 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "plugins": ["@maplibre/maplibre-react-native"]
+    "plugins": [
+      "@maplibre/maplibre-react-native",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#000000",
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 220
+        }
+      ]
+    ]
   }
 }
