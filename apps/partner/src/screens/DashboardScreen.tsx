@@ -103,7 +103,7 @@ export const DashboardScreen: React.FC<Props> = ({
   }
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView edges={['top']} style={styles.safe}>
       <GlobalCounter />
       
       {locationError && (

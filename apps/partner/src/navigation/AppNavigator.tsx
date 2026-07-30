@@ -8,7 +8,7 @@ import {
   Alert,
   BackHandler,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { theme, Text, Button, IconHouse, IconMapTrifold, IconList, IconCpu, IconUser } from '@qarmo/ui';
 import { useTranslation } from '@qarmo/i18n';
 import { useAuth } from '../hooks/useAuth';
@@ -63,6 +63,7 @@ const AUTH_TOTAL_STEPS = 2;
 
 export const AppNavigator: React.FC = () => {
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
   const { user, profile, loading, isCheckingProfile, profileFetchError, signOut, refreshProfile } = useAuth();
 
   const {
@@ -605,7 +606,10 @@ export const AppNavigator: React.FC = () => {
   return (
     <View style={styles.appContainer}>
       <View style={styles.tabContent}>{renderTabContent()}</View>
-      <View style={styles.tabBar}>
+      {/* Bottom SafeArea (Flutter-style): pad the tab bar up by the real system inset so
+          its icons/labels sit above the Android 3-button nav bar or the iOS home indicator,
+          instead of being drawn behind them. Falls back to 8px on gesture-nav devices. */}
+      <View style={[styles.tabBar, { paddingBottom: Math.max(insets.bottom, 8) }]}>
         <TouchableOpacity style={styles.tabItem} onPress={() => setActiveTab('home')} activeOpacity={0.8}>
           {isCustomer ? (
             <IconMapTrifold size={24} color={activeTab === 'home' ? theme.colors.primary : theme.colors.mutedText} />
@@ -672,17 +676,17 @@ const styles = StyleSheet.create({
   },
   tabBar: {
     flexDirection: 'row',
-    height: 72,
     borderTopWidth: 1,
     borderColor: theme.colors.border,
     backgroundColor: theme.colors.background,
-    paddingBottom: Platform.OS === 'ios' ? 16 : 8,
     paddingTop: 8,
+    // paddingBottom is applied inline from the safe-area inset (see render).
   },
   tabItem: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    minHeight: 56,
   },
   tabLabel: {
     fontFamily: theme.fonts.medium,

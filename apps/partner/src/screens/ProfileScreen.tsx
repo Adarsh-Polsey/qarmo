@@ -294,7 +294,7 @@ export const ProfileScreen: React.FC = () => {
   const hasLicence = docs.some((d) => d.doc_type === 'driving_licence');
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView edges={['top']} style={styles.safe}>
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
         {/* Title */}
         <Text variant="title" style={styles.pageTitle}>
